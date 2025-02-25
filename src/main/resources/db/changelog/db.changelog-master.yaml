@@ -1,0 +1,11 @@
+databaseChangeLog:
+  - include:
+      file: classpath:/db/changelog/changes/01-create-addresses-table.yaml
+  - include:
+      file:  classpath:/db/changelog/changes/02-create-accommodations-table.yaml
+  - include:
+      file: classpath:/db/changelog/changes/03-create-users-table.yaml
+  - include:
+      file: classpath:/db/changelog/changes/04-create-bookings-table.yaml
+  - include:
+      file: classpath:/db/changelog/changes/05-create-payments-table.yaml

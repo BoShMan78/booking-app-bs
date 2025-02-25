@@ -1,0 +1,59 @@
+databaseChangeLog:
+  - changeSet:
+      id: create-users-table
+      author: bohdan-s
+      changes:
+        - sql:
+            dbms: postgresql
+            sql: |
+              CREATE TYPE user_role AS ENUM('ADMIN', 'CUSTOMER');
+        - createTable:
+            tableName: users
+            columns:
+              - column:
+                  name: id
+                  type: bigint
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: email
+                  type: varchar(255)
+                  constraints:
+                    unique: true
+                    nullable: false
+              - column:
+                  name: first_name
+                  type: varchar(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: last_name
+                  type: varchar(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: password
+                  type: varchar(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: role
+                  type: user_role
+                  constraints:
+                    nullable: false
+              - column:
+                  name: is_deleted
+                  type: boolean
+                  defaultValueBoolean: false
+                  constraints:
+                    nullable: false
+
+        - createIndex:
+            tableName: users
+            columns:
+              - column:
+                  name: email
+            indexName: idx_users_email
+            unique: true
