@@ -1,0 +1,59 @@
+databaseChangeLog:
+  - changeSet:
+      id: create-payments-table
+      author: bohdan-s
+      changes:
+        - sql:
+            dbms: postgresql
+            sql: |
+              CREATE TYPE payment_status AS ENUM('PENDING', 'PAID');
+        - createTable:
+            tableName: payments
+            columns:
+              - column:
+                  name: id
+                  type: bigint
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: status
+                  type: payment_status
+                  constraints:
+                    nullable: false
+              - column:
+                  name: booking_id
+                  type: bigint
+                  constraints:
+                    nullable: false
+              - column:
+                  name: session_url
+                  type: varchar(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: session_id
+                  type: varchar(255)
+                  constraints:
+                    nullable: false
+                    unique: true
+              - column:
+                  name: amount_to_pay
+                  type: decimal
+                  constraints:
+                    nullable: false
+              - column:
+                  name: is_deleted
+                  type: boolean
+                  defaultValueBoolean: false
+                  constraints:
+                    nullable: false
+
+        - addForeignKeyConstraint:
+            baseTableName: payments
+            baseColumnNames: booking_id
+            referencedTableName: bookings
+            referencedColumnNames: id
+            constraintName: fk_payment_booking
+            onDelete: cascade
