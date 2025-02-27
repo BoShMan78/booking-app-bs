@@ -38,12 +38,13 @@ public class User {
     private String firstName;
     @Column(nullable = false)
     private String lastName;
+    //    @Convert(converter = RoleConverte r.class)
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private Role role;
     @JsonIgnore
     @Column(nullable = false)
     private String password;
-    @Column(nullable = false)
-    @Enumerated(EnumType.STRING)
-    private Role role;
     @Column(nullable = false)
     @Setter(AccessLevel.PROTECTED)
     private boolean isDeleted = false;

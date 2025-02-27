@@ -3,10 +3,6 @@ databaseChangeLog:
       id: create-users-table
       author: bohdan-s
       changes:
-        - sql:
-            dbms: postgresql
-            sql: |
-              CREATE TYPE user_role AS ENUM('ADMIN', 'CUSTOMER');
         - createTable:
             tableName: users
             columns:
@@ -40,7 +36,7 @@ databaseChangeLog:
                     nullable: false
               - column:
                   name: role
-                  type: user_role
+                  type: varchar(255)
                   constraints:
                     nullable: false
               - column:
