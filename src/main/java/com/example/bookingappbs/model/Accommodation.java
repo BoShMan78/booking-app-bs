@@ -1,5 +1,6 @@
 package com.example.bookingappbs.model;
 
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.CollectionTable;
 import jakarta.persistence.Column;
 import jakarta.persistence.ElementCollection;
@@ -37,7 +38,7 @@ public class Accommodation {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private Type type;
-    @OneToOne(fetch = FetchType.LAZY)
+    @OneToOne(fetch = FetchType.LAZY, cascade = CascadeType.PERSIST)
     @JoinColumn(name = "address_id", nullable = false, unique = true)
     private Address location;
     private String size;

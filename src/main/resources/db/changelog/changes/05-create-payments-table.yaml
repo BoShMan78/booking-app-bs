@@ -3,10 +3,6 @@ databaseChangeLog:
       id: create-payments-table
       author: bohdan-s
       changes:
-        - sql:
-            dbms: postgresql
-            sql: |
-              CREATE TYPE payment_status AS ENUM('PENDING', 'PAID');
         - createTable:
             tableName: payments
             columns:
@@ -19,7 +15,7 @@ databaseChangeLog:
                     nullable: false
               - column:
                   name: status
-                  type: payment_status
+                  type: varchar(255)
                   constraints:
                     nullable: false
               - column:

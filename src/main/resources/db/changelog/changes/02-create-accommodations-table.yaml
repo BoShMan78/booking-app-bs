@@ -3,11 +3,6 @@ databaseChangeLog:
       id: create-accommodations-table
       author: bohdan-s
       changes:
-        - sql:
-            dbms: postgresql
-            sql: |
-              CREATE TYPE accommodation_type AS ENUM('HOUSE', 'APARTMENT', 'CONDO', 'VACATION_HOME');
-
         - createTable:
             tableName: accommodations
             columns:
@@ -20,7 +15,7 @@ databaseChangeLog:
                     nullable: false
               - column:
                   name: type
-                  type: accommodation_type
+                  type: varchar(255)
                   constraints:
                     nullable: false
               - column:

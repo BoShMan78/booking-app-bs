@@ -3,10 +3,6 @@ databaseChangeLog:
       id: create-bookings-table
       author: bohdan-s
       changes:
-        - sql:
-            dbms: postgresql
-            sql: |
-              CREATE TYPE booking_status AS ENUM('PENDING', 'CONFIRMED', 'CANCELED', 'EXPIRED');
         - createTable:
             tableName: bookings
             columns:
@@ -39,7 +35,7 @@ databaseChangeLog:
                     nullable: false
               - column:
                   name: status
-                  type: booking_status
+                  type: varchar(255)
                   constraints:
                     nullable: false
               - column:
