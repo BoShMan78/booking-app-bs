@@ -72,12 +72,8 @@ public class BookingServiceImpl implements BookingService {
         Booking existedBooking = bookingRepository.findById(id)
                 .orElseThrow(() ->
                         new EntityNotFoundException("Cannot find Booking by id: "));
-        if (user.equals(existedBooking.getUser())) {
-            return bookingMapper.toDto(existedBooking);
-        } else {
-            throw new AccessDeniedException("You don't have permission to access this booking. "
-                    + "Please enter id number of your booking");
-        }
+
+        return bookingMapper.toDto(existedBooking);
     }
 
     @Override
@@ -85,10 +81,6 @@ public class BookingServiceImpl implements BookingService {
         Booking existedBooking = bookingRepository.findById(id)
                 .orElseThrow(() ->
                         new EntityNotFoundException("Booking with id " + id + " not found"));
-
-        if (user.getRole().equals(Role.CUSTOMER) && !existedBooking.getUser().equals(user)) {
-            throw new EntityNotFoundException("Current user does not have booking with id " + id);
-        }
 
         if (requestDto.status() != null) {
             if (user.getRole().equals(Role.CUSTOMER)) {
@@ -114,17 +106,11 @@ public class BookingServiceImpl implements BookingService {
 
     @Override
     public void deleteBookingById(User user, Long id) {
-        if (user.getRole().equals(Role.ADMIN)) {
-            bookingRepository.deleteById(id);
-        } else {
-            Booking existedBooking = bookingRepository.findById(id)
-                    .orElseThrow(() ->
-                            new EntityNotFoundException("Booking with id " + id + " not found"));
-            if (existedBooking.getUser().equals(user)) {
-                bookingRepository.delete(existedBooking);
-            } else {
-                throw new AccessDeniedException("Current user does not have booking with id " + id);
-            }
-        }
+        bookingRepository.deleteById(id);
+    }
+
+    @Override
+    public boolean canUserModifyBooking(User user, Long bookingId) {
+        return bookingRepository.existsBookingByIdAndUser(bookingId, user);
     }
 }

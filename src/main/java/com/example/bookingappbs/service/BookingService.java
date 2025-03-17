@@ -20,4 +20,6 @@ public interface BookingService {
     BookingDto updateBookingById(User user, Long id, UpdateBookingRequestDto requestDto);
 
     void deleteBookingById(User user, Long id);
+
+    boolean canUserModifyBooking(User user, Long bookingId);
 }

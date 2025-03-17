@@ -76,6 +76,7 @@ public class BookingController {
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN') or @bookingServiceImpl.canUserModifyBooking(#user, #id)")
     @Operation(
             summary = "Provides information about a specific booking",
             description = "Provides information about a specific booking by booking id"
@@ -85,10 +86,10 @@ public class BookingController {
             @PathVariable @Positive Long id
     ) {
         return bookingService.getBookingById(user, id);
-
     }
 
     @PatchMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN') or @bookingServiceImpl.canUserModifyBooking(#user, #id)")
     @Operation(
             summary = "Update booking details",
             description = "Allows users to update their booking details. "
@@ -103,6 +104,7 @@ public class BookingController {
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN') or @bookingServiceImpl.canUserModifyBooking(#user, #id)")
     @Operation(
             summary = "Enables the cancellation of bookings",
             description = "Allows user to cancel their booking. Admin allows to cancel any bookings"
