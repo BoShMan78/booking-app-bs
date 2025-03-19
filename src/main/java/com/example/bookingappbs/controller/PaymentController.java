@@ -7,6 +7,7 @@ import com.stripe.exception.StripeException;
 import com.stripe.model.Charge;
 import com.stripe.model.checkout.Session;
 import com.stripe.param.checkout.SessionCreateParams;
+import io.swagger.v3.oas.annotations.Operation;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
@@ -30,6 +31,7 @@ public class PaymentController {
 
     @PostMapping
     @ResponseBody
+    @Operation(summary = "Initiates payment sessions for booking transactions")
     public String createCheckoutSession(
             @RequestBody ChargeRequest chargeRequest,
             @AuthenticationPrincipal User user
@@ -65,6 +67,7 @@ public class PaymentController {
     }
 
     @GetMapping
+    @Operation(summary = "Retrieves payment information for users")
     public String getPayments(@AuthenticationPrincipal User user, Model model)
             throws StripeException {
         List<Charge> charges = paymentService.getChargesForUserId(user.getId());
@@ -73,12 +76,15 @@ public class PaymentController {
     }
 
     @GetMapping("/success")
+    @Operation(summary = "Handles successful payment processing through Stripe redirection")
     public String success(Model model) {
         model.addAttribute("message", "Payment successful!");
         return "payment_success";
     }
 
     @GetMapping("/cancel")
+    @Operation(summary = "Manages payment cancellation and returns payment paused messages"
+            + " during Stripe redirection")
     public String cancel(Model model) {
         model.addAttribute("message", "Payment cancelled");
         return "payment_cancel";
