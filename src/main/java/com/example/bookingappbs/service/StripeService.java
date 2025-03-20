@@ -29,7 +29,6 @@ public class StripeService {
         Map<String, Object> params = new HashMap<>();
         params.put("limit", LIMIT_FOR_USER_METADATA);
         params.put("metadata[user_id]", userId.toString());
-        notificationService.sendNotification("Payment successful");
         return Charge.list(params).getData();
     }
 }

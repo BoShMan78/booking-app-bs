@@ -25,8 +25,12 @@ public class AccommodationServiceImpl implements AccommodationService {
         Accommodation accommodation = accommodationMapper.toModel(requestDto);
 
         Accommodation savedAccommodation = accommodationRepository.save(accommodation);
-        notificationService.sendNotification("New accommodation created: "
-                + savedAccommodation.getId());
+        notificationService.sendNotification(
+                "New accommodation created: \n"
+                + "Accommodation id: " + savedAccommodation.getId() + "\n"
+                + "Accommodation type: " + savedAccommodation.getType() + "\n"
+                + "Daily rate: " + savedAccommodation.getDailyRate()
+        );
         return accommodationMapper.toDto(savedAccommodation);
     }
 
@@ -68,6 +72,6 @@ public class AccommodationServiceImpl implements AccommodationService {
     @Override
     public void deleteAccommodationById(Long id) {
         accommodationRepository.deleteById(id);
-        notificationService.sendNotification("Accommodation deleted: " + id);
+        notificationService.sendNotification("Accommodation deleted. Id: " + id);
     }
 }

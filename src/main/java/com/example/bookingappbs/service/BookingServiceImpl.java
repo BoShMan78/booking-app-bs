@@ -44,7 +44,12 @@ public class BookingServiceImpl implements BookingService {
         booking.setAccommodation(accommodation);
 
         Booking savedBooking = bookingRepository.save(booking);
-        notificationService.sendNotification("New booking created: " + savedBooking.getId());
+        notificationService.sendNotification(
+                "New booking created: \n"
+                + "Booking id: " + savedBooking.getId() + "\n"
+                + "Check-in date: " + savedBooking.getCheckInDate() + "\n"
+                + "Check-out date: " + savedBooking.getCheckOutDate() + "\n"
+        );
         return bookingMapper.toDto(savedBooking);
     }
 
@@ -111,7 +116,7 @@ public class BookingServiceImpl implements BookingService {
     @Override
     public void deleteBookingById(User user, Long id) {
         bookingRepository.deleteById(id);
-        notificationService.sendNotification("Booking canceled: " + id);
+        notificationService.sendNotification("Booking canceled. Id: " + id);
     }
 
     @Override

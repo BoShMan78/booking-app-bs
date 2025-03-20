@@ -12,6 +12,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import jakarta.validation.constraints.FutureOrPresent;
 import java.time.LocalDate;
 import lombok.AccessLevel;
 import lombok.EqualsAndHashCode;
@@ -27,6 +28,7 @@ import org.hibernate.annotations.Where;
 @NoArgsConstructor
 @EqualsAndHashCode(of = {"checkInDate", "user"})
 @SQLDelete(sql = "UPDATE bookings SET is_deleted=true WHERE id=?")
+@CheckoutLaterCheckin
 @Where(clause = "is_deleted=false")
 @Table(name = "bookings")
 public class Booking {
@@ -34,10 +36,9 @@ public class Booking {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     @Column(nullable = false)
+    @FutureOrPresent(message = "Check-in date must be today or in the future")
     private LocalDate checkInDate;
     @Column(nullable = false)
-    @CheckoutLaterCheckin //TODO: добавить проверку CheckOut позже CheckIn.
-    //TODO: Добавить проверку checkIn не может быть в прошлом
     private LocalDate checkOutDate;
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "accommodation_id", nullable = false)

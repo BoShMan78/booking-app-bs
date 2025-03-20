@@ -26,7 +26,6 @@ public class NotificationService extends TelegramLongPollingBot {
 
     @Override
     public void onUpdateReceived(Update update) {
-        //TODO:Обработка входящих сообщений от пользователя (если нужно)
     }
 
     public void sendNotification(String message) {

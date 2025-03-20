@@ -2,6 +2,7 @@ package com.example.bookingappbs.controller;
 
 import com.example.bookingappbs.model.ChargeRequest;
 import com.example.bookingappbs.model.User;
+import com.example.bookingappbs.service.NotificationService;
 import com.example.bookingappbs.service.StripeService;
 import com.stripe.exception.StripeException;
 import com.stripe.model.Charge;
@@ -28,6 +29,7 @@ public class PaymentController {
     private String domain;
 
     private final StripeService paymentService;
+    private final NotificationService notificationService;
 
     @PostMapping
     @ResponseBody
@@ -79,6 +81,7 @@ public class PaymentController {
     @Operation(summary = "Handles successful payment processing through Stripe redirection")
     public String success(Model model) {
         model.addAttribute("message", "Payment successful!");
+        notificationService.sendNotification("Payment successful");
         return "payment_success";
     }
 
