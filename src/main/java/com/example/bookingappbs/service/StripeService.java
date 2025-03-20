@@ -7,12 +7,15 @@ import jakarta.annotation.PostConstruct;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 @Service
+@RequiredArgsConstructor
 public class StripeService {
     private static final int LIMIT_FOR_USER_METADATA = 10;
+    private final NotificationService notificationService;
 
     @Value("${stripe_secret_key}")
     private String secretKey;
@@ -26,6 +29,7 @@ public class StripeService {
         Map<String, Object> params = new HashMap<>();
         params.put("limit", LIMIT_FOR_USER_METADATA);
         params.put("metadata[user_id]", userId.toString());
+        notificationService.sendNotification("Payment successful");
         return Charge.list(params).getData();
     }
 }

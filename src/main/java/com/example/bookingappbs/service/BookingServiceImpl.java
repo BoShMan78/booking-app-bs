@@ -29,6 +29,7 @@ public class BookingServiceImpl implements BookingService {
     private final BookingMapper bookingMapper;
     private final AccommodationRepository accommodationRepository;
     private final UserRepository userRepository;
+    private final NotificationService notificationService;
 
     @Override
     public BookingDto save(User user, CreateBookingRequestDto requestDto) {
@@ -41,7 +42,10 @@ public class BookingServiceImpl implements BookingService {
                 .orElseThrow(() -> new EntityNotFoundException("Cannot find accommodation by id: "
                         + booking.getAccommodation().getId()));
         booking.setAccommodation(accommodation);
-        return bookingMapper.toDto(bookingRepository.save(booking));
+
+        Booking savedBooking = bookingRepository.save(booking);
+        notificationService.sendNotification("New booking created: " + savedBooking.getId());
+        return bookingMapper.toDto(savedBooking);
     }
 
     @Override
@@ -107,6 +111,7 @@ public class BookingServiceImpl implements BookingService {
     @Override
     public void deleteBookingById(User user, Long id) {
         bookingRepository.deleteById(id);
+        notificationService.sendNotification("Booking canceled: " + id);
     }
 
     @Override

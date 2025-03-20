@@ -18,11 +18,16 @@ import org.springframework.stereotype.Service;
 public class AccommodationServiceImpl implements AccommodationService {
     private final AccommodationRepository accommodationRepository;
     private final AccommodationMapper accommodationMapper;
+    private final NotificationService notificationService;
 
     @Override
     public AccommodationDto save(CreateAccommodationRequestDto requestDto) {
         Accommodation accommodation = accommodationMapper.toModel(requestDto);
-        return accommodationMapper.toDto(accommodationRepository.save(accommodation));
+
+        Accommodation savedAccommodation = accommodationRepository.save(accommodation);
+        notificationService.sendNotification("New accommodation created: "
+                + savedAccommodation.getId());
+        return accommodationMapper.toDto(savedAccommodation);
     }
 
     @Override
@@ -63,5 +68,6 @@ public class AccommodationServiceImpl implements AccommodationService {
     @Override
     public void deleteAccommodationById(Long id) {
         accommodationRepository.deleteById(id);
+        notificationService.sendNotification("Accommodation deleted: " + id);
     }
 }
