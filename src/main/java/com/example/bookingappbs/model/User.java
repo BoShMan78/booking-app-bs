@@ -36,7 +36,6 @@ public class User implements UserDetails {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    // TODO: @Email  add validation by @Email
     @Column(unique = true, nullable = false)
     private String email;
     @Column(nullable = false)

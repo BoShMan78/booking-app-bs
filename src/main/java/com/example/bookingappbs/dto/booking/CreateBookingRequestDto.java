@@ -5,7 +5,6 @@ import jakarta.validation.constraints.NotNull;
 import java.time.LocalDate;
 
 public record CreateBookingRequestDto(
-        //TODO: check all DTO validation annotaions
         @NotNull(message = "Check-in date cannot be null")
         @FutureOrPresent(message = "Check-in date must be today or in the future")
         LocalDate checkInDate,
