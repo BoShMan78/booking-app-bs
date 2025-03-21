@@ -11,6 +11,7 @@ import java.util.List;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -19,12 +20,15 @@ public class AccommodationServiceImpl implements AccommodationService {
     private final AccommodationRepository accommodationRepository;
     private final AccommodationMapper accommodationMapper;
     private final NotificationService notificationService;
+    private final RedisService redisService;
+    private final RedisTemplate<String, Object> redisTemplate;
 
     @Override
     public AccommodationDto save(CreateAccommodationRequestDto requestDto) {
         Accommodation accommodation = accommodationMapper.toModel(requestDto);
 
         Accommodation savedAccommodation = accommodationRepository.save(accommodation);
+        redisService.deletePattern("accommodations::all::*");
         notificationService.sendNotification(
                 "New accommodation created: \n"
                 + "Accommodation id: " + savedAccommodation.getId() + "\n"
@@ -36,16 +40,33 @@ public class AccommodationServiceImpl implements AccommodationService {
 
     @Override
     public List<AccommodationDto> findAll(Pageable pageable) {
-        return accommodationRepository.findAll(pageable).stream()
-                .map(accommodationMapper::toDto)
-                .toList();
+        String key = "accommodations::all::page:"
+                + pageable.getPageNumber()
+                + "::size:" + pageable.getPageSize();
+
+        List<AccommodationDto> accommodationDtos = redisService.findAll(key, AccommodationDto.class);
+
+        if (accommodationDtos == null || accommodationDtos.isEmpty()) {
+            accommodationDtos = accommodationRepository.findAll(pageable).stream()
+                    .map(accommodationMapper::toDto)
+                    .toList();
+            redisService.save(key, accommodationDtos);
+        }
+        return accommodationDtos;
     }
 
     @Override
     public AccommodationDto findAccommodationById(Long id) {
-        Accommodation accommodation = accommodationRepository.findById(id).orElseThrow(() ->
-                new EntityNotFoundException("Accommodation with id " + id + " not found"));
-        return accommodationMapper.toDto(accommodation);
+        String key = "accommodation::" + id;
+        AccommodationDto accommodationDto = (AccommodationDto) redisService.find(key, AccommodationDto.class);
+        if (accommodationDto == null) {
+            Accommodation accommodation = accommodationRepository.findById(id).orElseThrow(
+                    () -> new EntityNotFoundException("Accommodation with id " + id + " not found")
+            );
+            accommodationDto = accommodationMapper.toDto(accommodation);
+            redisService.save(key, accommodationDto);
+        }
+        return accommodationDto;
     }
 
     @Override
@@ -66,12 +87,15 @@ public class AccommodationServiceImpl implements AccommodationService {
         }
 
         Accommodation savedAccommodation = accommodationRepository.save(existedAccommodation);
+        redisService.delete("accommodation::" + id);
         return accommodationMapper.toDto(savedAccommodation);
     }
+
 
     @Override
     public void deleteAccommodationById(Long id) {
         accommodationRepository.deleteById(id);
+        redisService.delete("accommodation::" + id);
         notificationService.sendNotification("Accommodation deleted. Id: " + id);
     }
 }

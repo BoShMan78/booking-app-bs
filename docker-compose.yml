@@ -18,6 +18,13 @@ services:
       timeout: 5s
       retries: 5
 
+  redis:
+    image: redis:latest
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+
   app:
     build:
       context: .
@@ -39,3 +46,4 @@ services:
 volumes:
   postgres_data:
     driver: local
+  redis-data:
