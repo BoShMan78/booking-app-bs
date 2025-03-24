@@ -20,6 +20,7 @@ import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -30,6 +31,8 @@ public class BookingServiceImpl implements BookingService {
     private final AccommodationRepository accommodationRepository;
     private final UserRepository userRepository;
     private final NotificationService notificationService;
+    private final RedisService redisService;
+    private final RedisTemplate<String, Object> redisTemplate;
 
     @Override
     public BookingDto save(User user, CreateBookingRequestDto requestDto) {
@@ -44,13 +47,20 @@ public class BookingServiceImpl implements BookingService {
         booking.setAccommodation(accommodation);
 
         Booking savedBooking = bookingRepository.save(booking);
+        BookingDto dto = bookingMapper.toDto(savedBooking);
+
+        redisService.deletePattern("bookings::all::*");
+        redisService.deletePattern("bookings::user::*");
+        redisService.save("booking::" + savedBooking.getId(), dto);
+
         notificationService.sendNotification(
                 "New booking created: \n"
                 + "Booking id: " + savedBooking.getId() + "\n"
                 + "Check-in date: " + savedBooking.getCheckInDate() + "\n"
                 + "Check-out date: " + savedBooking.getCheckOutDate() + "\n"
         );
-        return bookingMapper.toDto(savedBooking);
+
+        return dto;
     }
 
     @Override
@@ -59,30 +69,62 @@ public class BookingServiceImpl implements BookingService {
             Status status,
             Pageable pageable
     ) {
+        String key = "bookings::user::" + userId + "::status::" + status
+                + "::page::" + pageable.getPageNumber()
+                + "::size::" + pageable.getPageSize()
+                + "::sort::" + pageable.getSort();
+        List<BookingDto> cachedBookings = redisService.findAll(key, BookingDto.class);
+        if (cachedBookings != null && cachedBookings.size() > 0) {
+            return cachedBookings;
+        }
+
         Page<Booking> byUserIdAndStatus = bookingRepository
                 .findByUserIdAndStatus(userId, status, pageable);
 
-        return byUserIdAndStatus.stream()
+        List<BookingDto> bookingDtos = byUserIdAndStatus.stream()
                 .map(bookingMapper::toDto)
                 .collect(Collectors.toList());
+
+        redisService.save(key, bookingDtos);
+
+        return bookingDtos;
     }
 
     @Override
     public List<BookingDto> getBookingsByUser(User user, Pageable pageable) {
+        String key = "bookings::user::" + user.getId()
+                + "::page::" + pageable.getPageNumber()
+                + "::size::" + pageable.getPageSize()
+                + "::sort::" + pageable.getSort();
+        List<BookingDto> cachedBookings = redisService.findAll(key, BookingDto.class);
+        if (cachedBookings != null && cachedBookings.size() > 0) {
+            return cachedBookings;
+        }
+
         Page<Booking> bookingsByUser = bookingRepository.getBookingsByUser(user, pageable);
 
-        return bookingsByUser.stream()
+        List<BookingDto> bookingDtos = bookingsByUser.stream()
                 .map(bookingMapper::toDto)
                 .collect(Collectors.toList());
+
+        redisService.save(key, bookingDtos);
+
+        return bookingDtos;
     }
 
     @Override
     public BookingDto getBookingById(User user, Long id) {
-        Booking existedBooking = bookingRepository.findById(id)
-                .orElseThrow(() ->
-                        new EntityNotFoundException("Cannot find Booking by id: "));
+        String key = "booking::" + id;
+        BookingDto bookingDto = (BookingDto) redisService.find(key, BookingDto.class);
+        if (bookingDto == null) {
+            Booking existedBooking = bookingRepository.findById(id)
+                    .orElseThrow(() ->
+                            new EntityNotFoundException("Cannot find Booking by id: "));
+            bookingDto = bookingMapper.toDto(existedBooking);
 
-        return bookingMapper.toDto(existedBooking);
+            redisService.save(key, bookingDto);
+        }
+        return bookingDto;
     }
 
     @Override
@@ -109,13 +151,25 @@ public class BookingServiceImpl implements BookingService {
         }
         Optional.ofNullable(requestDto.checkInDate()).ifPresent(existedBooking::setCheckInDate);
         Optional.ofNullable(requestDto.checkOutDate()).ifPresent(existedBooking::setCheckOutDate);
+
         Booking savedBooking = bookingRepository.save(existedBooking);
-        return bookingMapper.toDto(savedBooking);
+        BookingDto bookingDto = bookingMapper.toDto(savedBooking);
+
+        redisService.deletePattern("bookings::all::*");
+        redisService.deletePattern("bookings::user::*");
+        redisService.save("booking::" + id, bookingDto);
+
+        return bookingDto;
     }
 
     @Override
     public void deleteBookingById(User user, Long id) {
         bookingRepository.deleteById(id);
+
+        redisService.deletePattern("bookings::all::*");
+        redisService.deletePattern("bookings::user::*");
+        redisService.delete("booking::" + id);
+
         notificationService.sendNotification("Booking canceled. Id: " + id);
     }
 

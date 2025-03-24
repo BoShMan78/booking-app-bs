@@ -26,10 +26,11 @@ public class AccommodationServiceImpl implements AccommodationService {
     @Override
     public AccommodationDto save(CreateAccommodationRequestDto requestDto) {
         Accommodation accommodation = accommodationMapper.toModel(requestDto);
-
         Accommodation savedAccommodation = accommodationRepository.save(accommodation);
+        AccommodationDto dto = accommodationMapper.toDto(savedAccommodation);
 
         redisService.deletePattern("accommodations::all::*");
+        redisService.save("accommodation::" + savedAccommodation.getId(), dto);
 
         notificationService.sendNotification(
                 "New accommodation created: \n"
@@ -37,7 +38,7 @@ public class AccommodationServiceImpl implements AccommodationService {
                 + "Accommodation type: " + savedAccommodation.getType() + "\n"
                 + "Daily rate: " + savedAccommodation.getDailyRate()
         );
-        return accommodationMapper.toDto(savedAccommodation);
+        return dto;
     }
 
     @Override
@@ -45,7 +46,6 @@ public class AccommodationServiceImpl implements AccommodationService {
         String key = "accommodations::all::page:"
                 + pageable.getPageNumber()
                 + "::size:" + pageable.getPageSize();
-
         List<AccommodationDto> accommodationDtos = redisService
                 .findAll(key, AccommodationDto.class);
 
@@ -64,6 +64,7 @@ public class AccommodationServiceImpl implements AccommodationService {
         String key = "accommodation::" + id;
         AccommodationDto accommodationDto = (AccommodationDto) redisService
                 .find(key, AccommodationDto.class);
+
         if (accommodationDto == null) {
             Accommodation accommodation = accommodationRepository.findById(id).orElseThrow(
                     () -> new EntityNotFoundException("Accommodation with id " + id + " not found")
