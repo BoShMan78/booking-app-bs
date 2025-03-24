@@ -28,7 +28,9 @@ public class AccommodationServiceImpl implements AccommodationService {
         Accommodation accommodation = accommodationMapper.toModel(requestDto);
 
         Accommodation savedAccommodation = accommodationRepository.save(accommodation);
+
         redisService.deletePattern("accommodations::all::*");
+
         notificationService.sendNotification(
                 "New accommodation created: \n"
                 + "Accommodation id: " + savedAccommodation.getId() + "\n"
@@ -44,12 +46,14 @@ public class AccommodationServiceImpl implements AccommodationService {
                 + pageable.getPageNumber()
                 + "::size:" + pageable.getPageSize();
 
-        List<AccommodationDto> accommodationDtos = redisService.findAll(key, AccommodationDto.class);
+        List<AccommodationDto> accommodationDtos = redisService
+                .findAll(key, AccommodationDto.class);
 
         if (accommodationDtos == null || accommodationDtos.isEmpty()) {
             accommodationDtos = accommodationRepository.findAll(pageable).stream()
                     .map(accommodationMapper::toDto)
                     .toList();
+
             redisService.save(key, accommodationDtos);
         }
         return accommodationDtos;
@@ -58,12 +62,14 @@ public class AccommodationServiceImpl implements AccommodationService {
     @Override
     public AccommodationDto findAccommodationById(Long id) {
         String key = "accommodation::" + id;
-        AccommodationDto accommodationDto = (AccommodationDto) redisService.find(key, AccommodationDto.class);
+        AccommodationDto accommodationDto = (AccommodationDto) redisService
+                .find(key, AccommodationDto.class);
         if (accommodationDto == null) {
             Accommodation accommodation = accommodationRepository.findById(id).orElseThrow(
                     () -> new EntityNotFoundException("Accommodation with id " + id + " not found")
             );
             accommodationDto = accommodationMapper.toDto(accommodation);
+
             redisService.save(key, accommodationDto);
         }
         return accommodationDto;
@@ -87,15 +93,21 @@ public class AccommodationServiceImpl implements AccommodationService {
         }
 
         Accommodation savedAccommodation = accommodationRepository.save(existedAccommodation);
-        redisService.delete("accommodation::" + id);
-        return accommodationMapper.toDto(savedAccommodation);
-    }
+        AccommodationDto dto = accommodationMapper.toDto(savedAccommodation);
 
+        redisService.deletePattern("accommodations::all::*");
+        redisService.save("accommodation::" + id, dto);
+
+        return dto;
+    }
 
     @Override
     public void deleteAccommodationById(Long id) {
         accommodationRepository.deleteById(id);
+
+        redisService.deletePattern("accommodations::all::*");
         redisService.delete("accommodation::" + id);
+
         notificationService.sendNotification("Accommodation deleted. Id: " + id);
     }
 }

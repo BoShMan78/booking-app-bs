@@ -1,7 +1,6 @@
 package com.example.bookingappbs.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.Collections;
 import java.util.List;
@@ -38,8 +37,6 @@ public class RedisService {
         } catch (JsonProcessingException e) {
             throw new RuntimeException("Error deserializing from Redis: " + e);
         }
-
-
     }
 
     public <T> List<T> findAll(String key, Class<T> clazz) {
@@ -49,7 +46,9 @@ public class RedisService {
         }
         System.out.println("Retrieved from Redis: " + key + " -> " + json);
         try {
-            return objectMapper.readValue(json, objectMapper.getTypeFactory().constructCollectionType(List.class, clazz));
+            return objectMapper.readValue(json, objectMapper
+                    .getTypeFactory()
+                    .constructCollectionType(List.class, clazz));
         } catch (JsonProcessingException e) {
             System.out.println("Error deserializing value from Redis: " + e);
             return Collections.emptyList();
