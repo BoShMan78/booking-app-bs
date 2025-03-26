@@ -34,9 +34,13 @@ public class AccommodationServiceImpl implements AccommodationService {
 
         notificationService.sendNotification(
                 "New accommodation created: \n"
-                + "Accommodation id: " + savedAccommodation.getId() + "\n"
-                + "Accommodation type: " + savedAccommodation.getType() + "\n"
-                + "Daily rate: " + savedAccommodation.getDailyRate()
+                        + "Accommodation ID: " + accommodation.getId() + "\n"
+                        + "Type: " + accommodation.getType() + "\n"
+                        + "Location: " + accommodation.getLocation().getStreet() + " "
+                        + accommodation.getLocation().getHouse() + ", "
+                        + accommodation.getLocation().getCity() + ", "
+                        + accommodation.getLocation().getCountry() + "\n"
+                        + "Daily rate: " + savedAccommodation.getDailyRate()
         );
         return dto;
     }
@@ -104,11 +108,21 @@ public class AccommodationServiceImpl implements AccommodationService {
 
     @Override
     public void deleteAccommodationById(Long id) {
-        accommodationRepository.deleteById(id);
-
         redisService.deletePattern("accommodations::all::*");
         redisService.delete("accommodation::" + id);
 
-        notificationService.sendNotification("Accommodation deleted. Id: " + id);
+        Accommodation accommodation = accommodationRepository.getAccommodationById(id);
+        accommodationRepository.deleteById(id);
+
+        notificationService.sendNotification(
+                "Accommodation deleted: \n"
+                        + "Accommodation ID: " + accommodation.getId() + "\n"
+                        + "Type: " + accommodation.getType() + "\n"
+                        + "Location: " + accommodation.getLocation().getStreet() + " "
+                        + accommodation.getLocation().getHouse() + ", "
+                        + accommodation.getLocation().getCity() + ", "
+                        + accommodation.getLocation().getCountry() + "\n"
+                        + "Daily rate: " + accommodation.getDailyRate()
+        );
     }
 }

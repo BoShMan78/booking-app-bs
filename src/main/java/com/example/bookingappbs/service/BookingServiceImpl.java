@@ -22,6 +22,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -66,9 +67,15 @@ public class BookingServiceImpl implements BookingService {
 
         notificationService.sendNotification(
                 "New booking created: \n"
-                + "Booking id: " + savedBooking.getId() + "\n"
-                + "Check-in date: " + savedBooking.getCheckInDate() + "\n"
-                + "Check-out date: " + savedBooking.getCheckOutDate() + "\n"
+                        + "Booking ID: " + booking.getId() + "\n"
+                        + "Accommodation ID: " + accommodation.getId() + "\n"
+                        + "Type: " + accommodation.getType() + "\n"
+                        + "Location: " + accommodation.getLocation().getStreet() + " "
+                        + accommodation.getLocation().getHouse() + ", "
+                        + accommodation.getLocation().getCity() + ", "
+                        + accommodation.getLocation().getCountry() + "\n"
+                        + "Check-in Date: " + booking.getCheckInDate() + "\n"
+                        + "Check-out Date: " + booking.getCheckOutDate()
         );
 
         return dto;
@@ -223,11 +230,54 @@ public class BookingServiceImpl implements BookingService {
         redisService.deletePattern("bookings::user::*");
         redisService.delete("booking::" + id);
 
-        notificationService.sendNotification("Booking canceled. Id: " + id);
+        Accommodation accommodation = booking.getAccommodation();
+        notificationService.sendNotification(
+                "Booking canceled:  \n"
+                        + "Booking ID: " + booking.getId() + "\n"
+                        + "Accommodation ID: " + accommodation.getId() + "\n"
+                        + "Type: " + accommodation.getType() + "\n"
+                        + "Location: " + accommodation.getLocation().getStreet() + " "
+                        + accommodation.getLocation().getHouse() + ", "
+                        + accommodation.getLocation().getCity() + ", "
+                        + accommodation.getLocation().getCountry() + "\n"
+                        + "Check-in Date: " + booking.getCheckInDate() + "\n"
+                        + "Check-out Date: " + booking.getCheckOutDate()
+        );
     }
 
     @Override
     public boolean canUserModifyBooking(User user, Long bookingId) {
         return bookingRepository.existsBookingByIdAndUser(bookingId, user);
+    }
+
+    @Override
+    @Scheduled(cron = "0 0 0 * * *")
+    public void checkAndExpiredBooking() {
+        LocalDate yesterday = LocalDate.now().minusDays(1);
+        List<Booking> expiredBookings = bookingRepository
+                .findByStatusIsNotAndCheckOutDateLessThanEqual(Status.CANCELED, yesterday);
+
+        if (expiredBookings.isEmpty()) {
+            notificationService.sendNotification("No expired bookings today!");
+        } else {
+            for (Booking booking : expiredBookings) {
+                booking.setStatus(Status.EXPIRED);
+                bookingRepository.save(booking);
+                Accommodation accommodation = booking.getAccommodation();
+                notificationService.sendNotification(
+                        "Booking expired and accommodation released:\n"
+                                + "Booking ID: " + booking.getId() + "\n"
+                                + "Accommodation ID: " + accommodation.getId() + "\n"
+                                + "Type: " + accommodation.getType() + "\n"
+                                + "Location: " + accommodation.getLocation().getStreet() + " "
+                                + accommodation.getLocation().getHouse() + ", "
+                                + accommodation.getLocation().getCity() + ", "
+                                + accommodation.getLocation().getCountry() + "\n"
+                                + "Check-in Date: " + booking.getCheckInDate() + "\n"
+                                + "Check-out Date: " + booking.getCheckOutDate()
+                );
+            }
+        }
+
     }
 }

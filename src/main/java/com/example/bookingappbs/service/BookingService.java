@@ -22,4 +22,6 @@ public interface BookingService {
     void deleteBookingById(User user, Long id);
 
     boolean canUserModifyBooking(User user, Long bookingId);
+
+    void checkAndExpiredBooking();
 }

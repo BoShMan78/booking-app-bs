@@ -15,7 +15,6 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class StripeService {
     private static final int LIMIT_FOR_USER_METADATA = 10;
-    private final NotificationService notificationService;
 
     @Value("${stripe_secret_key}")
     private String secretKey;

@@ -5,6 +5,7 @@ import com.example.bookingappbs.model.Booking;
 import com.example.bookingappbs.model.Booking.Status;
 import com.example.bookingappbs.model.User;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Optional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -31,4 +32,7 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
             LocalDate checkInDate,
             Long id
     );
+
+    List<Booking> findByStatusIsNotAndCheckOutDateLessThanEqual(
+            Status status, LocalDate checkOutDate);
 }
