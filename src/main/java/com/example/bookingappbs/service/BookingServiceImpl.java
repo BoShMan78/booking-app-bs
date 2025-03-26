@@ -14,6 +14,7 @@ import com.example.bookingappbs.model.User.Role;
 import com.example.bookingappbs.repository.AccommodationRepository;
 import com.example.bookingappbs.repository.BookingRepository;
 import com.example.bookingappbs.repository.UserRepository;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -45,6 +46,16 @@ public class BookingServiceImpl implements BookingService {
                 .orElseThrow(() -> new EntityNotFoundException("Cannot find accommodation by id: "
                         + booking.getAccommodation().getId()));
         booking.setAccommodation(accommodation);
+
+        boolean isAccommodationBooked = bookingRepository
+                .existsByAccommodationAndCheckInDateLessThanAndCheckOutDateGreaterThan(
+                        accommodation, booking.getCheckOutDate(), booking.getCheckInDate()
+                );
+
+        if (isAccommodationBooked) {
+            throw new IllegalArgumentException("Accommodation with id "
+                    + accommodation.getId() + " is already booked for the selected dates");
+        }
 
         Booking savedBooking = bookingRepository.save(booking);
         BookingDto dto = bookingMapper.toDto(savedBooking);
@@ -140,6 +151,11 @@ public class BookingServiceImpl implements BookingService {
                                 + "Please contact the administrator.");
             }
             if (user.getRole().equals(Role.ADMIN)) {
+                if (existedBooking.getStatus() == Status.CANCELED
+                        || existedBooking.getStatus() == Status.EXPIRED) {
+                    throw new IllegalArgumentException("Cannot update booking with status "
+                            + existedBooking.getStatus());
+                }
                 Optional.ofNullable(requestDto.status()).ifPresent(status -> {
                     try {
                         existedBooking.setStatus(Status.valueOf(status));
@@ -149,8 +165,36 @@ public class BookingServiceImpl implements BookingService {
                 });
             }
         }
-        Optional.ofNullable(requestDto.checkInDate()).ifPresent(existedBooking::setCheckInDate);
-        Optional.ofNullable(requestDto.checkOutDate()).ifPresent(existedBooking::setCheckOutDate);
+
+        if (requestDto.checkOutDate() != null) {
+            if (requestDto.checkInDate() != null
+                    && requestDto.checkOutDate().isBefore(requestDto.checkInDate().plusDays(1))) {
+                throw new IllegalArgumentException("Check-out date must be after check-in date");
+            } else if (requestDto.checkInDate() == null
+                    && requestDto.checkOutDate()
+                    .isBefore(existedBooking.getCheckInDate()
+                    .plusDays(1))) {
+                throw new IllegalArgumentException("Check-out date must be after check-in date");
+            }
+            existedBooking.setCheckOutDate(requestDto.checkOutDate());
+        }
+
+        if (requestDto.checkInDate() != null || requestDto.checkOutDate() != null) {
+            Accommodation accommodation = existedBooking.getAccommodation();
+            LocalDate newCheckInDate = requestDto.checkInDate() != null
+                    ? requestDto.checkInDate() : existedBooking.getCheckInDate();
+            LocalDate newCheckOutDate = requestDto.checkOutDate() != null
+                    ? requestDto.checkOutDate() : existedBooking.getCheckOutDate();
+            boolean isAccommodationBooked = bookingRepository
+                    .existsByAccommodationAndCheckInDateLessThanAndCheckOutDateGreaterThanAndIdNot(
+                            accommodation, newCheckOutDate, newCheckInDate, id
+                    );
+
+            if (isAccommodationBooked) {
+                throw new IllegalArgumentException("Accommodation with id "
+                        + accommodation.getId() + " is already booked for the selected dates");
+            }
+        }
 
         Booking savedBooking = bookingRepository.save(existedBooking);
         BookingDto bookingDto = bookingMapper.toDto(savedBooking);
@@ -164,7 +208,16 @@ public class BookingServiceImpl implements BookingService {
 
     @Override
     public void deleteBookingById(User user, Long id) {
-        bookingRepository.deleteById(id);
+        Booking booking = bookingRepository.findById(id)
+                        .orElseThrow(() -> new EntityNotFoundException(
+                                "Booking with id " + id + " not found")
+                        );
+        if (booking.getStatus() == Status.CANCELED) {
+            throw new IllegalArgumentException("Booking with id " + id + " is already canceled");
+        }
+
+        booking.setStatus(Status.CANCELED);
+        bookingRepository.save(booking);
 
         redisService.deletePattern("bookings::all::*");
         redisService.deletePattern("bookings::user::*");

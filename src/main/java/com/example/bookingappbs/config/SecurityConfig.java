@@ -52,7 +52,8 @@ public class SecurityConfig {
                                 "/swagger-ui/**",
                                 "/v3/api-docs/**")
                                 .permitAll()
-                                .requestMatchers(HttpMethod.POST, "/books").hasRole("ADMIN")
+                                .requestMatchers(HttpMethod.GET, "/accommodations").permitAll()
+                                .requestMatchers(HttpMethod.GET, "/accommodations/{id}").permitAll()
                                 .anyRequest().authenticated()
                 )
                 .httpBasic(Customizer.withDefaults())

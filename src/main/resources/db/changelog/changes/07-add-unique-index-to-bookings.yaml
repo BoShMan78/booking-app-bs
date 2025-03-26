@@ -1,0 +1,14 @@
+databaseChangeLog:
+  - changeSet:
+      id: add-unique-index-to-bookings
+      author: bohdan-s
+      changes:
+        - createIndex:
+            tableName: bookings
+            indexName: unique_accommodation_date
+            unique: true
+            columns:
+              - column:
+                  name: accommodation_id
+              - column:
+                  name: check_in_date
