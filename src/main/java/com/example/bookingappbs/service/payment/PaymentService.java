@@ -18,4 +18,6 @@ public interface PaymentService {
     PaymentDto findBySessionId(Long sessionId);
 
     void updatePaymentStatus(Long sessionId, Status status);
+
+    void updateSessionUrl(Long sessionId, String url);
 }

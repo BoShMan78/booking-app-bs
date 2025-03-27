@@ -1,11 +1,14 @@
 package com.example.bookingappbs.controller;
 
+import com.example.bookingappbs.dto.accommodation.AccommodationDto;
 import com.example.bookingappbs.dto.booking.BookingDto;
 import com.example.bookingappbs.dto.payment.CreatePaymentRequestDto;
 import com.example.bookingappbs.dto.payment.PaymentDto;
+import com.example.bookingappbs.exception.EntityNotFoundException;
 import com.example.bookingappbs.mapper.PaymentMapper;
 import com.example.bookingappbs.model.Payment.Status;
 import com.example.bookingappbs.model.User;
+import com.example.bookingappbs.service.accommodation.AccommodationService;
 import com.example.bookingappbs.service.booking.BookingService;
 import com.example.bookingappbs.service.notification.NotificationService;
 import com.example.bookingappbs.service.payment.PaymentService;
@@ -16,6 +19,7 @@ import com.stripe.param.checkout.SessionCreateParams;
 import io.swagger.v3.oas.annotations.Operation;
 
 import java.math.BigDecimal;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 
 import jakarta.validation.Valid;
@@ -48,47 +52,37 @@ public class PaymentController {
     private final BookingService bookingService;
     private final PaymentMapper paymentMapper;
     private final NotificationService notificationService;
+    private final AccommodationService accommodationService;
 
     @PostMapping
     @ResponseBody
-    @Operation(summary = "Initiates payment sessions for booking transactions")
-    public String createCheckoutSession(
-            @RequestBody @Valid CreatePaymentRequestDto requestDto,
+    @Operation(summary = "Initiates payment sessions for a specific booking")
+    public String createPaymentSession(
+            @RequestParam("bookingId") Long bookingId,
             @AuthenticationPrincipal User user
     ) throws StripeException {
-        BookingDto bookingDto = bookingService.getBookingById(user, requestDto.bookingId());
+        BookingDto bookingDto = bookingService.getBookingById(user, bookingId);
         if (bookingDto == null || !bookingDto.userId().equals(user.getId())) {
-            throw new IllegalArgumentException("Error: Reservation not found or does not belong to the user.");
+            throw new EntityNotFoundException("Error: Reservation not found or does not belong to the user.");
         }
 
-        SessionCreateParams params =
-                SessionCreateParams.builder()
-                        .setMode(SessionCreateParams.Mode.PAYMENT)
-                        .setSuccessUrl(domain + "/payments/success/?session_id={CHECKOUT_SESSION_ID}")
-                        .setCancelUrl(domain + "/payments/cancel/")
-                        .addLineItem(
-                                SessionCreateParams.LineItem.builder()
-                                        .setQuantity(1L)
-                                        .setPriceData(
-                                                SessionCreateParams.LineItem.PriceData.builder()
-                                                        .setCurrency(currency)
-                                                        .setUnitAmount(requestDto.amountToPay()
-                                                                .multiply(BigDecimal.valueOf(100))
-                                                                .longValue())
-                                                        .setProductData(SessionCreateParams
-                                                                .LineItem.PriceData
-                                                                .ProductData.builder()
-                                                                .setName(DESCRIPTION + requestDto.bookingId())
-                                                                .build())
-                                                        .build())
-                                        .build())
-                        .putMetadata("user_id", user.getId().toString())
-                        .putMetadata("booking_id", requestDto.bookingId().toString())
-                        .build();
-        Session session = Session.create(params);
+        long days = ChronoUnit.DAYS.between(bookingDto.checkOutDate(), bookingDto.checkInDate());
+        AccommodationDto accommodationDto = accommodationService.findAccommodationById(bookingDto.accommodationId());
+        BigDecimal totalAmount = accommodationDto.dailyRate().multiply(BigDecimal.valueOf(days));
 
-        paymentService.save(requestDto);
-        return session.getId();
+        String sessionId = stripeService.createPaymentSession(bookingDto, totalAmount);
+
+        CreatePaymentRequestDto paymentRequestDto = new CreatePaymentRequestDto(
+                bookingId,
+                null,
+                sessionId,
+                totalAmount
+        );
+
+        PaymentDto paymentDto = paymentService.save(paymentRequestDto);
+        paymentService.updateSessionUrl(paymentDto.id(), stripeService.retrieveSession(sessionId).getUrl());
+
+        return sessionId;
     }
 
     @GetMapping("/my")
@@ -112,18 +106,22 @@ public class PaymentController {
     @GetMapping("/success")
     @Operation(summary = "Handles successful payment processing through Stripe redirection")
     public String success(@RequestParam("session_id") String sessionId, Model model) {
-        Long sesionIdLong = Long.valueOf(sessionId);
-        PaymentDto paymentDto = paymentService.findBySessionId(sesionIdLong);
-
-        if (paymentDto != null) {
-            paymentService.updatePaymentStatus(sesionIdLong, Status.PAID);
-            model.addAttribute("message", "Payment successful");
-            notificationService.sendNotification("Payment successful for session " + sesionIdLong);
-            return "payment success";
-        } else {
-            model.addAttribute("message",
-                    "Payment not found for session " + sesionIdLong);
-            return "payment_cancel";
+        try {
+            Session session = stripeService.retrieveSession(sessionId);
+            if (session.getPaymentStatus().equals("paid")) {
+                Long sessionIdLong = Long.parseLong(sessionId);
+                PaymentDto paymentDto = paymentService.findBySessionId(sessionIdLong);
+                paymentService.updatePaymentStatus(paymentDto.id(), Status.PAID);
+                model.addAttribute("message", "Payment successful!");
+                notificationService.sendNotification("Payment successful for session " + sessionIdLong);
+                return "payment_success";
+            } else {
+                model.addAttribute("message", "Payment pending or not successful for session " + sessionId);
+                return "payment_pending";
+            }
+        } catch (StripeException e) {
+            model.addAttribute("message", "Error retrieving payment session: " + e.getMessage());
+            return "payment_error";
         }
     }
 

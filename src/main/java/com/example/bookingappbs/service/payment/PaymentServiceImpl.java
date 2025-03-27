@@ -58,4 +58,12 @@ public class PaymentServiceImpl implements PaymentService {
         payment.setStatus(status);
         paymentRepository.save(payment);
     }
+
+    @Override
+    public void updateSessionUrl(Long id, String url) {
+        Payment payment = paymentRepository.findBySessionId(id).orElseThrow(
+                () -> new EntityNotFoundException("Cannot find payment with session Id:" + id));
+        payment.setSessionUrl(url);
+        paymentRepository.save(payment);
+    }
 }
