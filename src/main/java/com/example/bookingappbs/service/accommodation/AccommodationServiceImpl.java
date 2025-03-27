@@ -1,4 +1,4 @@
-package com.example.bookingappbs.service;
+package com.example.bookingappbs.service.accommodation;
 
 import com.example.bookingappbs.dto.accommodation.AccommodationDto;
 import com.example.bookingappbs.dto.accommodation.CreateAccommodationRequestDto;
@@ -9,6 +9,9 @@ import com.example.bookingappbs.model.Accommodation;
 import com.example.bookingappbs.repository.AccommodationRepository;
 import java.util.List;
 import java.util.Optional;
+
+import com.example.bookingappbs.service.notification.NotificationService;
+import com.example.bookingappbs.service.RedisService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.redis.core.RedisTemplate;

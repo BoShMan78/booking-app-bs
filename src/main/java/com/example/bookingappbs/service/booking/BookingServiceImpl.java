@@ -1,4 +1,4 @@
-package com.example.bookingappbs.service;
+package com.example.bookingappbs.service.booking;
 
 import com.example.bookingappbs.dto.booking.BookingDto;
 import com.example.bookingappbs.dto.booking.CreateBookingRequestDto;
@@ -18,6 +18,9 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
+
+import com.example.bookingappbs.service.notification.NotificationService;
+import com.example.bookingappbs.service.RedisService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;

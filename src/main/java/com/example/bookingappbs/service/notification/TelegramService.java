@@ -1,4 +1,4 @@
-package com.example.bookingappbs.service;
+package com.example.bookingappbs.service.notification;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;

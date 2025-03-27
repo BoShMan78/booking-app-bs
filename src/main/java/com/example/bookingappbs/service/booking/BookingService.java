@@ -1,4 +1,4 @@
-package com.example.bookingappbs.service;
+package com.example.bookingappbs.service.booking;
 
 import com.example.bookingappbs.dto.booking.BookingDto;
 import com.example.bookingappbs.dto.booking.CreateBookingRequestDto;

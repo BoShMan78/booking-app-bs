@@ -1,4 +1,4 @@
-package com.example.bookingappbs.service;
+package com.example.bookingappbs.service.user;
 
 import com.example.bookingappbs.dto.user.UpdateCurrentUserRequestDto;
 import com.example.bookingappbs.dto.user.UpdateUserRoleRequestDto;

@@ -4,7 +4,7 @@ import com.example.bookingappbs.dto.user.UpdateCurrentUserRequestDto;
 import com.example.bookingappbs.dto.user.UpdateUserRoleRequestDto;
 import com.example.bookingappbs.dto.user.UserResponseDto;
 import com.example.bookingappbs.model.User;
-import com.example.bookingappbs.service.UserService;
+import com.example.bookingappbs.service.user.UserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;

@@ -3,7 +3,7 @@ package com.example.bookingappbs.controller;
 import com.example.bookingappbs.dto.accommodation.AccommodationDto;
 import com.example.bookingappbs.dto.accommodation.CreateAccommodationRequestDto;
 import com.example.bookingappbs.dto.accommodation.UpdateAccommodationRequestDto;
-import com.example.bookingappbs.service.AccommodationService;
+import com.example.bookingappbs.service.accommodation.AccommodationService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;

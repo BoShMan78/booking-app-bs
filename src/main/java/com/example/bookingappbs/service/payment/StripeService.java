@@ -1,4 +1,4 @@
-package com.example.bookingappbs.service;
+package com.example.bookingappbs.service.payment;
 
 import com.stripe.Stripe;
 import com.stripe.exception.StripeException;

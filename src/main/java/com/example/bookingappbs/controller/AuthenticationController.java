@@ -6,7 +6,7 @@ import com.example.bookingappbs.dto.user.UserRegistrationRequestDto;
 import com.example.bookingappbs.dto.user.UserResponseDto;
 import com.example.bookingappbs.exception.RegistrationException;
 import com.example.bookingappbs.security.AuthenticationService;
-import com.example.bookingappbs.service.UserService;
+import com.example.bookingappbs.service.user.UserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;

@@ -1,6 +1,6 @@
 package com.example.bookingappbs.config;
 
-import com.example.bookingappbs.service.TelegramService;
+import com.example.bookingappbs.service.notification.TelegramService;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.telegram.telegrambots.meta.TelegramBotsApi;
