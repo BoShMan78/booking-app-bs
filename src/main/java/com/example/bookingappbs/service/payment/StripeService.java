@@ -1,8 +1,6 @@
 package com.example.bookingappbs.service.payment;
 
-import com.example.bookingappbs.dto.accommodation.AccommodationDto;
 import com.example.bookingappbs.dto.booking.BookingDto;
-import com.example.bookingappbs.model.ChargeRequest;
 import com.example.bookingappbs.service.accommodation.AccommodationService;
 import com.stripe.Stripe;
 import com.stripe.exception.StripeException;
@@ -11,7 +9,6 @@ import com.stripe.model.checkout.Session;
 import com.stripe.param.checkout.SessionCreateParams;
 import jakarta.annotation.PostConstruct;
 import java.math.BigDecimal;
-import java.time.temporal.ChronoUnit;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -41,7 +38,8 @@ public class StripeService {
         Stripe.apiKey = secretKey;
     }
 
-    public String createPaymentSession(BookingDto bookingDto, BigDecimal totalAmount) throws StripeException {
+    public String createPaymentSession(BookingDto bookingDto, BigDecimal totalAmount)
+            throws StripeException {
         UriComponentsBuilder successUriBuilder = UriComponentsBuilder.fromUriString(domain)
                 .path("/payments/success")
                 .queryParam("session_id", "{CHECKOUT_SESSION_ID}");
@@ -64,7 +62,10 @@ public class StripeService {
                                                 .setUnitAmount(totalAmount
                                                         .multiply(BigDecimal.valueOf(100))
                                                         .longValue())
-                                                .setProductData(SessionCreateParams.LineItem.PriceData.ProductData.builder()
+                                                .setProductData(SessionCreateParams
+                                                        .LineItem
+                                                        .PriceData
+                                                        .ProductData.builder()
                                                         .setName(DESCRIPTION + bookingDto.id())
                                                         .build())
                                                 .build())

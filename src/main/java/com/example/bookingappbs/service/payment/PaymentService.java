@@ -2,11 +2,9 @@ package com.example.bookingappbs.service.payment;
 
 import com.example.bookingappbs.dto.payment.CreatePaymentRequestDto;
 import com.example.bookingappbs.dto.payment.PaymentDto;
-import com.example.bookingappbs.model.Payment;
 import com.example.bookingappbs.model.Payment.Status;
-import org.springframework.data.domain.Pageable;
-
 import java.util.List;
+import org.springframework.data.domain.Pageable;
 
 public interface PaymentService {
     List<PaymentDto> getPaymentsForCurrentUser(Long userId, Pageable pageable);
@@ -15,9 +13,9 @@ public interface PaymentService {
 
     PaymentDto save(CreatePaymentRequestDto requestDto);
 
-    PaymentDto findBySessionId(Long sessionId);
+    PaymentDto findBySessionId(String sessionId);
 
-    void updatePaymentStatus(Long sessionId, Status status);
+    void updatePaymentStatus(String sessionId, Status status);
 
     void updateSessionUrl(Long sessionId, String url);
 }

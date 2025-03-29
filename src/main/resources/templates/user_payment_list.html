@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>My Payments</title>
+</head>
+<body>
+<h1>My Payments</h1>
+
+<div th:if="${payments.empty}">
+    <p>You don't have any payments yet.</p>
+</div>
+
+<div th:unless="${payments.empty}">
+    <table>
+        <thead>
+        <tr>
+            <th>Payment ID</th>
+            <th>Booking ID</th>
+            <th>Status</th>
+            <th>Amount</th>
+            <th>Stripe Session ID</th>
+            <th>Stripe Session URL</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="payment : ${payments}">
+            <td th:text="${payment.id}"></td>
+            <td th:text="${payment.bookingId}"></td>
+            <td th:text="${payment.status}"></td>
+            <td th:text="${payment.amountToPay}"></td>
+            <td th:text="${payment.sessionId}"></td>
+            <td>
+                <a th:if="${payment.sessionUrl}" th:href="${payment.sessionUrl}" target="_blank">Go to Payment Session</a>
+                <span th:unless="${payment.sessionUrl}">URL not available</span>
+            </td>
+        </tr>
+        </tbody>
+    </table>
+</div>
+
+<br/>
+<p><a th:href="@{/}">Go to Homepage</a></p>
+</body>
+</html>

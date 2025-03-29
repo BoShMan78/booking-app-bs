@@ -15,14 +15,10 @@ import com.example.bookingappbs.service.payment.PaymentService;
 import com.example.bookingappbs.service.payment.StripeService;
 import com.stripe.exception.StripeException;
 import com.stripe.model.checkout.Session;
-import com.stripe.param.checkout.SessionCreateParams;
 import io.swagger.v3.oas.annotations.Operation;
-
 import java.math.BigDecimal;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
-
-import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Pageable;
@@ -32,7 +28,6 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
@@ -41,11 +36,12 @@ import org.springframework.web.bind.annotation.ResponseBody;
 @RequestMapping(value = "/payments")
 @RequiredArgsConstructor
 public class PaymentController {
+    private static final String DESCRIPTION = "Оплата бронювання #";
+
     @Value("${domain}")
     private String domain;
     @Value("${currency}")
     private String currency;
-    private static final String DESCRIPTION = "Оплата бронювання #";
 
     private final StripeService stripeService;
     private final PaymentService paymentService;
@@ -63,33 +59,41 @@ public class PaymentController {
     ) throws StripeException {
         BookingDto bookingDto = bookingService.getBookingById(user, bookingId);
         if (bookingDto == null || !bookingDto.userId().equals(user.getId())) {
-            throw new EntityNotFoundException("Error: Reservation not found or does not belong to the user.");
+            throw new EntityNotFoundException(
+                    "Error: Reservation not found or does not belong to the user.");
         }
 
-        long days = ChronoUnit.DAYS.between(bookingDto.checkOutDate(), bookingDto.checkInDate());
-        AccommodationDto accommodationDto = accommodationService.findAccommodationById(bookingDto.accommodationId());
+        long days = ChronoUnit.DAYS.between(bookingDto.checkInDate(), bookingDto.checkOutDate());
+        AccommodationDto accommodationDto = accommodationService
+                .findAccommodationById(bookingDto.accommodationId());
         BigDecimal totalAmount = accommodationDto.dailyRate().multiply(BigDecimal.valueOf(days));
 
         String sessionId = stripeService.createPaymentSession(bookingDto, totalAmount);
+        String sessionUrl = stripeService.retrieveSession(sessionId).getUrl();
 
         CreatePaymentRequestDto paymentRequestDto = new CreatePaymentRequestDto(
                 bookingId,
-                null,
+                sessionUrl,
                 sessionId,
                 totalAmount
         );
 
         PaymentDto paymentDto = paymentService.save(paymentRequestDto);
-        paymentService.updateSessionUrl(paymentDto.id(), stripeService.retrieveSession(sessionId).getUrl());
+        paymentService.updateSessionUrl(
+                paymentDto.id(), stripeService.retrieveSession(sessionId).getUrl());
 
         return sessionId;
     }
 
     @GetMapping("/my")
     @Operation(summary = "Retrieves payment information for the authenticated user")
-    public String getUserPayments(@AuthenticationPrincipal User user, Model model, Pageable pageable)
-            throws StripeException {
-        List<PaymentDto> paymentDtos = paymentService.getPaymentsForCurrentUser(user.getId(), pageable);
+    public String getUserPayments(
+            @AuthenticationPrincipal User user,
+            Model model,
+            Pageable pageable
+    ) throws StripeException {
+        List<PaymentDto> paymentDtos = paymentService
+                .getPaymentsForCurrentUser(user.getId(), pageable);
         model.addAttribute("payments", paymentDtos);
         return "user_payment_list";
     }
@@ -100,7 +104,7 @@ public class PaymentController {
     public String getAllPayments(Model model, Pageable pageable) {
         List<PaymentDto> paymentDtos = paymentService.getAllPayments(pageable);
         model.addAttribute("payments", paymentDtos);
-        return "all payments_list";
+        return "all_payments_list";
     }
 
     @GetMapping("/success")
@@ -109,14 +113,15 @@ public class PaymentController {
         try {
             Session session = stripeService.retrieveSession(sessionId);
             if (session.getPaymentStatus().equals("paid")) {
-                Long sessionIdLong = Long.parseLong(sessionId);
-                PaymentDto paymentDto = paymentService.findBySessionId(sessionIdLong);
-                paymentService.updatePaymentStatus(paymentDto.id(), Status.PAID);
+                PaymentDto paymentDto = paymentService.findBySessionId(sessionId);
+                paymentService.updatePaymentStatus(sessionId, Status.PAID);
                 model.addAttribute("message", "Payment successful!");
-                notificationService.sendNotification("Payment successful for session " + sessionIdLong);
+                notificationService
+                        .sendNotification("Payment successful for session " + sessionId);
                 return "payment_success";
             } else {
-                model.addAttribute("message", "Payment pending or not successful for session " + sessionId);
+                model.addAttribute("message",
+                        "Payment pending or not successful for session " + sessionId);
                 return "payment_pending";
             }
         } catch (StripeException e) {

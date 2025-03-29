@@ -36,7 +36,7 @@ public class Payment {
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "booking_id", nullable = false)
     private Booking booking;
-    @Column(name = "session_url", nullable = false)
+    @Column(name = "session_url", length = 510, nullable = false)
     private String sessionUrl;
     @Column(nullable = false, unique = true)
     private String sessionId;
