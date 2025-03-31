@@ -1,10 +1,12 @@
 package com.example.bookingappbs.service.booking;
 
+import com.example.bookingappbs.dto.accommodation.AccommodationDto;
 import com.example.bookingappbs.dto.booking.BookingDto;
 import com.example.bookingappbs.dto.booking.CreateBookingRequestDto;
 import com.example.bookingappbs.dto.booking.UpdateBookingRequestDto;
 import com.example.bookingappbs.exception.AccessDeniedException;
 import com.example.bookingappbs.exception.EntityNotFoundException;
+import com.example.bookingappbs.mapper.AccommodationMapper;
 import com.example.bookingappbs.mapper.BookingMapper;
 import com.example.bookingappbs.model.Accommodation;
 import com.example.bookingappbs.model.Booking;
@@ -37,6 +39,7 @@ public class BookingServiceImpl implements BookingService {
     private final NotificationService notificationService;
     private final RedisService redisService;
     private final RedisTemplate<String, Object> redisTemplate;
+    private final AccommodationMapper accommodationMapper;
 
     @Override
     public BookingDto save(User user, CreateBookingRequestDto requestDto) {
@@ -280,6 +283,13 @@ public class BookingServiceImpl implements BookingService {
                 );
             }
         }
+    }
 
+    @Override
+    public AccommodationDto findAccommodationById(Long accommodationId) {
+        Accommodation accommodation = accommodationRepository.findById(accommodationId)
+                .orElseThrow(() -> new EntityNotFoundException("Cannot find accommodation with id "
+                        + accommodationId));
+        return accommodationMapper.toDto(accommodation);
     }
 }

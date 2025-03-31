@@ -1,11 +1,11 @@
 <!DOCTYPE html>
-<html lang="en">
+<html xmlns:th="http://www.thymeleaf.org">
 <head>
-    <meta charset="UTF-8">
     <title>Payment Cancelled</title>
 </head>
 <body>
-    <h1>Payment Cancelled or Paused</h1>
-    <p>Your payment was either cancelled or paused.</p>
+<h1>Payment Cancelled</h1>
+<p th:text="${message}"></p>
+<p><a th:href="@{/bookings/my}">Go to My Bookings</a></p>
 </body>
 </html>

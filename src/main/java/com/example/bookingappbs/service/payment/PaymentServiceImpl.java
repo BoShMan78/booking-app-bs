@@ -55,7 +55,6 @@ public class PaymentServiceImpl implements PaymentService {
     public PaymentDto findBySessionId(String sessionId) {
         Payment payment = paymentRepository.findBySessionId(sessionId).orElseThrow(
                 () -> new EntityNotFoundException("Cannot find session Id:" + sessionId));
-
         return paymentMapper.toDto(payment);
     }
 
@@ -73,5 +72,27 @@ public class PaymentServiceImpl implements PaymentService {
                 () -> new EntityNotFoundException("Cannot find payment with session Id:" + id));
         payment.setSessionUrl(url);
         paymentRepository.save(payment);
+    }
+
+    @Override
+    public PaymentDto findById(Long paymentId) {
+        Payment payment = paymentRepository.findById(paymentId)
+                .orElseThrow(() ->
+                        new EntityNotFoundException("Cannot find payment with id: " + paymentId));
+        return paymentMapper.toDto(payment);
+    }
+
+    @Override
+    public void updateSessionIdAndUrl(Long paymentId, String sessionId, String sessionUrl) {
+        Payment payment = paymentRepository.findById(paymentId).orElseThrow(() ->
+                new EntityNotFoundException("Cannot find payment with id: " + paymentId));
+        payment.setSessionId(sessionId);
+        payment.setSessionUrl(sessionUrl);
+        paymentRepository.save(payment);
+    }
+
+    @Override
+    public List<Payment> findByStatus(Status status) {
+        return paymentRepository.findByStatus(status);
     }
 }

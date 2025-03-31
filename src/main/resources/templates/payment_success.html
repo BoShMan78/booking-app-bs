@@ -1,11 +1,11 @@
 <!DOCTYPE html>
-<html lang="en">
+<html xmlns:th="http://www.thymeleaf.org">
 <head>
-    <meta charset="UTF-8">
-    <title>Payment Success</title>
+    <title>Payment Successful</title>
 </head>
 <body>
-    <h1>Payment Successful!</h1>
-    <p>Your payment has been processed successfully.</p>
+<h1>Payment Successful!</h1>
+<p th:text="${message}"></p>
+<p><a th:href="@{/bookings/my}">Go to My Bookings</a></p>
 </body>
 </html>

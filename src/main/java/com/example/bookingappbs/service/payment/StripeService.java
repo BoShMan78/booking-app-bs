@@ -1,7 +1,6 @@
 package com.example.bookingappbs.service.payment;
 
 import com.example.bookingappbs.dto.booking.BookingDto;
-import com.example.bookingappbs.service.accommodation.AccommodationService;
 import com.stripe.Stripe;
 import com.stripe.exception.StripeException;
 import com.stripe.model.Charge;
@@ -20,18 +19,16 @@ import org.springframework.web.util.UriComponentsBuilder;
 @Service
 @RequiredArgsConstructor
 public class StripeService {
-    private static final int LIMIT_FOR_USER_METADATA = 10;
-    private static final String DESCRIPTION = "Оплата бронювання #";
-    private final AccommodationService accommodationService;
-
     @Value("${stripe_secret_key}")
     private String secretKey;
     @Value("${domain}")
     private String domain;
     @Value("${currency}")
     private String currency;
-
-    private final PaymentService paymentService;
+    @Value("${payment.description.prefix}")
+    private String descriptionPrefix;
+    @Value("${limit.for.user.metadata}")
+    private int limitForUserMetadata;
 
     @PostConstruct
     public void init() {
@@ -40,6 +37,26 @@ public class StripeService {
 
     public String createPaymentSession(BookingDto bookingDto, BigDecimal totalAmount)
             throws StripeException {
+        SessionCreateParams params = buildSessionCreateParams(bookingDto, totalAmount);
+        Session session = Session.create(params);
+        return session.getId();
+    }
+
+    public List<Charge> getChargesForUserId(Long userId) throws StripeException {
+        Map<String, Object> params = new HashMap<>();
+        params.put("limit", limitForUserMetadata);
+        params.put("metadata[user_id]", userId.toString());
+        return Charge.list(params).getData();
+    }
+
+    public Session retrieveSession(String sessionId) throws StripeException {
+        return Session.retrieve(sessionId);
+    }
+
+    private SessionCreateParams buildSessionCreateParams(
+            BookingDto bookingDto,
+            BigDecimal totalAmount
+    ) {
         UriComponentsBuilder successUriBuilder = UriComponentsBuilder.fromUriString(domain)
                 .path("/payments/success")
                 .queryParam("session_id", "{CHECKOUT_SESSION_ID}");
@@ -66,7 +83,8 @@ public class StripeService {
                                                         .LineItem
                                                         .PriceData
                                                         .ProductData.builder()
-                                                        .setName(DESCRIPTION + bookingDto.id())
+                                                        .setName(descriptionPrefix
+                                                                + bookingDto.id())
                                                         .build())
                                                 .build())
                                 .build())
@@ -74,18 +92,6 @@ public class StripeService {
                 .putMetadata("user_id", bookingDto.userId().toString())
                 .build();
 
-        Session session = Session.create(params);
-        return session.getId();
-    }
-
-    public List<Charge> getChargesForUserId(Long userId) throws StripeException {
-        Map<String, Object> params = new HashMap<>();
-        params.put("limit", LIMIT_FOR_USER_METADATA);
-        params.put("metadata[user_id]", userId.toString());
-        return Charge.list(params).getData();
-    }
-
-    public Session retrieveSession(String sessionId) throws StripeException {
-        return Session.retrieve(sessionId);
+        return params;
     }
 }

@@ -1,5 +1,6 @@
 package com.example.bookingappbs.service.booking;
 
+import com.example.bookingappbs.dto.accommodation.AccommodationDto;
 import com.example.bookingappbs.dto.booking.BookingDto;
 import com.example.bookingappbs.dto.booking.CreateBookingRequestDto;
 import com.example.bookingappbs.dto.booking.UpdateBookingRequestDto;
@@ -24,4 +25,6 @@ public interface BookingService {
     boolean canUserModifyBooking(User user, Long bookingId);
 
     void checkAndExpiredBooking();
+
+    AccommodationDto findAccommodationById(Long accommodationId);
 }
