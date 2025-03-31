@@ -25,4 +25,6 @@ public interface PaymentService {
     void updateSessionIdAndUrl(Long paymentId, String sessionId, String sessionUrl);
 
     List<Payment> findByStatus(Status status);
+
+    long countPendingPaymentsForUser(Long userId);
 }

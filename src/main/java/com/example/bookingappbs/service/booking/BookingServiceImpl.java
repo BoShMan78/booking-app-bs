@@ -6,6 +6,7 @@ import com.example.bookingappbs.dto.booking.CreateBookingRequestDto;
 import com.example.bookingappbs.dto.booking.UpdateBookingRequestDto;
 import com.example.bookingappbs.exception.AccessDeniedException;
 import com.example.bookingappbs.exception.EntityNotFoundException;
+import com.example.bookingappbs.exception.PendingPaymentException;
 import com.example.bookingappbs.mapper.AccommodationMapper;
 import com.example.bookingappbs.mapper.BookingMapper;
 import com.example.bookingappbs.model.Accommodation;
@@ -18,6 +19,7 @@ import com.example.bookingappbs.repository.BookingRepository;
 import com.example.bookingappbs.repository.UserRepository;
 import com.example.bookingappbs.service.RedisService;
 import com.example.bookingappbs.service.notification.NotificationService;
+import com.example.bookingappbs.service.payment.PaymentService;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
@@ -40,9 +42,15 @@ public class BookingServiceImpl implements BookingService {
     private final RedisService redisService;
     private final RedisTemplate<String, Object> redisTemplate;
     private final AccommodationMapper accommodationMapper;
+    private final PaymentService paymentService;
 
     @Override
     public BookingDto save(User user, CreateBookingRequestDto requestDto) {
+        long pendingPaymentsCount = paymentService.countPendingPaymentsForUser(user.getId());
+        if (pendingPaymentsCount > 0) {
+            throw new PendingPaymentException("There are already pending payments for the user");
+        }
+
         Booking booking = bookingMapper.toModel(requestDto);
         booking.setStatus(Status.PENDING);
         booking.setUser(user);
@@ -64,11 +72,11 @@ public class BookingServiceImpl implements BookingService {
         }
 
         Booking savedBooking = bookingRepository.save(booking);
-        BookingDto dto = bookingMapper.toDto(savedBooking);
+        BookingDto bookingDto = bookingMapper.toDto(savedBooking);
 
         redisService.deletePattern("bookings::all::*");
         redisService.deletePattern("bookings::user::*");
-        redisService.save("booking::" + savedBooking.getId(), dto);
+        redisService.save("booking::" + savedBooking.getId(), bookingDto);
 
         notificationService.sendNotification(
                 "New booking created: \n"
@@ -83,7 +91,7 @@ public class BookingServiceImpl implements BookingService {
                         + "Check-out Date: " + booking.getCheckOutDate()
         );
 
-        return dto;
+        return bookingDto;
     }
 
     @Override

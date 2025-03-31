@@ -14,4 +14,6 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
     Optional<Payment> findBySessionId(String sessionId);
 
     List<Payment> findByStatus(Status status);
+
+    long countByBooking_User_IdAndStatus(Long bookingUserId, Status status);
 }

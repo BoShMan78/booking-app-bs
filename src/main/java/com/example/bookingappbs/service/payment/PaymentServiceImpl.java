@@ -95,4 +95,9 @@ public class PaymentServiceImpl implements PaymentService {
     public List<Payment> findByStatus(Status status) {
         return paymentRepository.findByStatus(status);
     }
+
+    @Override
+    public long countPendingPaymentsForUser(Long userId) {
+        return paymentRepository.countByBooking_User_IdAndStatus(userId, Status.PENDING);
+    }
 }
