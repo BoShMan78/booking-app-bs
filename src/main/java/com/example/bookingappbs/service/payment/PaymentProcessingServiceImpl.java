@@ -102,8 +102,32 @@ public class PaymentProcessingServiceImpl implements PaymentProcessingService {
                 PaymentDto paymentDto = paymentService.findBySessionId(sessionId);
                 paymentService.updatePaymentStatus(sessionId, Status.PAID);
                 model.addAttribute("message", paymentSuccessMessage);
+
+                BookingDto bookingDto = bookingService
+                        .getBookingById(null, paymentDto.bookingId());
+                AccommodationDto accommodationDto = accommodationService
+                        .findAccommodationById(bookingDto.accommodationId());
+                String telegramMessage = String.format(
+                        "✅ Successful Payment!\n\n"
+                                + "Payment ID: %d\n"
+                                + "Booking ID: %d\n"
+                                + "Accommodation: %s\n"
+                                + "Check-in Date: %s\n"
+                                + "Check-out Date: %s\n"
+                                + "Amount: %.2f %s\n"
+                                + "Stripe Session ID: %s",
+                        paymentDto.id(),
+                        bookingDto.id(),
+                        accommodationDto.type(),
+                        bookingDto.checkInDate().toString(),
+                        bookingDto.checkOutDate().toString(),
+                        paymentDto.amountToPay(),
+                        currency,
+                        sessionId
+                );
                 notificationService.sendNotification("Payment successful for session #"
                         + sessionId);
+
                 return "payment_success";
             } else {
                 model.addAttribute("message", paymentPendingMessage + sessionId);
