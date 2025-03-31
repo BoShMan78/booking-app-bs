@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Payment Error</title>
+</head>
+<body>
+<h1>Payment Error</h1>
+<div th:if="${message}">
+    <p th:text="${message}"></p>
+</div>
+<p>An error occurred while processing your payment. Please try again later or contact support.</p>
+<a th:href="@{/bookings/my}">Return to My Bookings</a>
+</body>
+</html>

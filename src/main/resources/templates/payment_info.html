@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Payment Information</title>
+</head>
+<body>
+<h1>Payment Information</h1>
+<div th:if="${message}">
+    <p th:text="${message}"></p>
+</div>
+<p>Payment information.</p>
+<a th:href="@{/payments/my}">View My Payments</a>
+<br>
+<a th:href="@{/bookings/my}">Return to My Bookings</a>
+</body>
+</html>

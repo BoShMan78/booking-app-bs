@@ -22,6 +22,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Pageable;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.ui.Model;
 
 @Service
@@ -67,6 +68,7 @@ public class PaymentProcessingServiceImpl implements PaymentProcessingService {
     }
 
     @Override
+    @Transactional
     public PaymentDto createPaymentSession(User user, Long bookingId) throws StripeException {
         BookingDto bookingDto = bookingService.getBookingById(user, bookingId);
         if (bookingDto == null || !bookingDto.userId().equals(user.getId())) {
@@ -95,6 +97,7 @@ public class PaymentProcessingServiceImpl implements PaymentProcessingService {
     }
 
     @Override
+    @Transactional
     public String handlePaymentSuccess(String sessionId, Model model) {
         try {
             Session session = stripeService.retrieveSession(sessionId);
@@ -135,7 +138,7 @@ public class PaymentProcessingServiceImpl implements PaymentProcessingService {
             }
         } catch (StripeException e) {
             model.addAttribute("message", paymentErrorMessage + e.getMessage());
-            return "payment_error"; //TODO: make template
+            return "payment_error";
         }
     }
 
@@ -147,6 +150,7 @@ public class PaymentProcessingServiceImpl implements PaymentProcessingService {
     }
 
     @Override
+    @Transactional
     public String renewPaymentSession(Long paymentId, User user, Model model) {
         PaymentDto paymentDto = paymentService.findById(paymentId);
 
@@ -157,7 +161,7 @@ public class PaymentProcessingServiceImpl implements PaymentProcessingService {
 
         if (!paymentDto.status().equals(Status.EXPIRED.toString())) {
             model.addAttribute("message", paymentNotExpiredMessage);
-            return "payment_info"; //TODO:make template
+            return "payment_info";
         }
 
         BookingDto bookingDto = bookingService.getBookingById(user, paymentDto.bookingId());
@@ -186,11 +190,12 @@ public class PaymentProcessingServiceImpl implements PaymentProcessingService {
         } catch (StripeException e) {
             model.addAttribute("message",
                     "Error creating new payment session: " + e.getMessage());
-            return "payment_error"; //TODO: make template
+            return "payment_error";
         }
     }
 
     @Scheduled(fixedDelay = 60000)
+    @Transactional
     public void checkExpiredSessions() {
         List<Payment> pendingPayments = paymentService.findByStatus(Status.PENDING);
         for (Payment payment : pendingPayments) {

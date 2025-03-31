@@ -15,6 +15,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
@@ -40,6 +41,7 @@ public class PaymentServiceImpl implements PaymentService {
     }
 
     @Override
+    @Transactional
     public PaymentDto save(CreatePaymentRequestDto requestDto) {
         Payment payment = paymentMapper.toModel(requestDto);
         payment.setStatus(Status.PENDING);
@@ -59,6 +61,7 @@ public class PaymentServiceImpl implements PaymentService {
     }
 
     @Override
+    @Transactional
     public void updatePaymentStatus(String sessionId, Status status) {
         Payment payment = paymentRepository.findBySessionId(sessionId).orElseThrow(() ->
                 new EntityNotFoundException("Cannot find payment with session Id:" + sessionId));
@@ -67,6 +70,7 @@ public class PaymentServiceImpl implements PaymentService {
     }
 
     @Override
+    @Transactional
     public void updateSessionUrl(Long id, String url) {
         Payment payment = paymentRepository.findById(id).orElseThrow(
                 () -> new EntityNotFoundException("Cannot find payment with session Id:" + id));
@@ -83,6 +87,7 @@ public class PaymentServiceImpl implements PaymentService {
     }
 
     @Override
+    @Transactional
     public void updateSessionIdAndUrl(Long paymentId, String sessionId, String sessionUrl) {
         Payment payment = paymentRepository.findById(paymentId).orElseThrow(() ->
                 new EntityNotFoundException("Cannot find payment with id: " + paymentId));
