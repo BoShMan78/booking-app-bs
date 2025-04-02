@@ -37,12 +37,14 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.boot.test.mock.mockito.SpyBean;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.datasource.init.ScriptUtils;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.annotation.DirtiesContext.ClassMode;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
@@ -51,6 +53,7 @@ import org.telegram.telegrambots.meta.TelegramBotsApi;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @DirtiesContext(classMode = ClassMode.AFTER_EACH_TEST_METHOD)
+@ActiveProfiles("test")
 public class AccommodationControllerTest {
     protected static MockMvc mockMvc;
     @Autowired
@@ -62,9 +65,8 @@ public class AccommodationControllerTest {
     private TelegramBotsApi telegramBotsApi;
     @MockBean
     private TelegramService telegramService;
-    @MockBean
+    @SpyBean
     private AccommodationService accommodationService;
-
 
     @BeforeEach
     void beforeEach(@Autowired WebApplicationContext applicationContext,
