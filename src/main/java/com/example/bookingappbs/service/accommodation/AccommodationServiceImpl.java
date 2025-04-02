@@ -95,7 +95,7 @@ public class AccommodationServiceImpl implements AccommodationService {
         Optional.ofNullable(requestDto.size()).ifPresent(existedAccommodation::setSize);
         Optional.ofNullable(requestDto.amenities()).ifPresent(existedAccommodation::setAmenities);
         Optional.ofNullable(requestDto.dailyRate()).ifPresent(existedAccommodation::setDailyRate);
-        if (requestDto.availability() != 0) {
+        if (requestDto.availability() != null && requestDto.availability() != 0) {
             existedAccommodation.setAvailability(requestDto.availability());
         }
 

@@ -14,6 +14,7 @@ import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -83,7 +84,8 @@ public class AccommodationController {
             summary = "Delete an accommodation by id",
             description = "Enables the removal of accommodations"
     )
-    public void deleteAccommodationById(@PathVariable @Positive Long id) {
+    public ResponseEntity<Void> deleteAccommodationById(@PathVariable @Positive Long id) {
         accommodationService.deleteAccommodationById(id);
+        return ResponseEntity.noContent().build();
     }
 }

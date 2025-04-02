@@ -6,6 +6,6 @@ public record AddressDto(
         String city,
         String street,
         String house,
-        int apartment
+        Integer apartment
 ) {
 }

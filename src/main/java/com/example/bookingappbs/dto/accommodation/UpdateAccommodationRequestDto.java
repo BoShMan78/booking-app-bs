@@ -11,6 +11,6 @@ public record UpdateAccommodationRequestDto(
         String size,
         List<String> amenities,
         BigDecimal dailyRate,
-        int availability
+        Integer availability
 ) {
 }

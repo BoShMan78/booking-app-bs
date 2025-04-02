@@ -50,6 +50,8 @@ public class PaymentProcessingServiceImpl implements PaymentProcessingService {
     private String bookingNotFoundMessage;
     @Value("${accommodation.not_found.message}")
     private String accommodationNotFoundMessage;
+    @Value("${attribute.message}")
+    private String attributeMessage;
 
     private final StripeService stripeService;
     private final PaymentService paymentService;
@@ -104,7 +106,7 @@ public class PaymentProcessingServiceImpl implements PaymentProcessingService {
             if (session.getPaymentStatus().equals(Status.PAID.toString())) {
                 PaymentDto paymentDto = paymentService.findBySessionId(sessionId);
                 paymentService.updatePaymentStatus(sessionId, Status.PAID);
-                model.addAttribute("message", paymentSuccessMessage);
+                model.addAttribute(attributeMessage, paymentSuccessMessage);
 
                 BookingDto bookingDto = bookingService
                         .getBookingById(null, paymentDto.bookingId());
@@ -128,16 +130,15 @@ public class PaymentProcessingServiceImpl implements PaymentProcessingService {
                         currency,
                         sessionId
                 );
-                notificationService.sendNotification("Payment successful for session #"
-                        + sessionId);
+                notificationService.sendNotification(telegramMessage);
 
                 return "payment_success";
             } else {
-                model.addAttribute("message", paymentPendingMessage + sessionId);
+                model.addAttribute(attributeMessage, paymentPendingMessage + sessionId);
                 return "payment_pending";
             }
         } catch (StripeException e) {
-            model.addAttribute("message", paymentErrorMessage + e.getMessage());
+            model.addAttribute(attributeMessage, paymentErrorMessage + e.getMessage());
             return "payment_error";
         }
     }
