@@ -275,6 +275,7 @@ public class AccommodationControllerTest {
     @WithMockUser(username = "admin", roles = {"ADMIN"})
     @DisplayName("Update accommodation by id")
     void updateAccommodationById_GivenValidAccommodation_Ok() throws Exception {
+        //Given
         UpdateAccommodationRequestDto requestDto = new UpdateAccommodationRequestDto(
                 null,
                 null,
@@ -323,12 +324,15 @@ public class AccommodationControllerTest {
     @WithMockUser(username = "admin", roles = {"ADMIN"})
     @DisplayName("Delete accommodation by id")
     void deleteAccommodationById_existingId_NoContent() throws Exception {
+        //Given
         Long id = 1L;
         willDoNothing().given(accommodationService).deleteAccommodationById(id);
 
+        //When
         mockMvc.perform(delete("/accommodations/{id}", id))
                 .andExpect(status().isNoContent());
 
+        //Then
         verify(accommodationService, times(1)).deleteAccommodationById(id);
     }
 }
