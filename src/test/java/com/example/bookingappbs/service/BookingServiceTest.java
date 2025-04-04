@@ -321,7 +321,4 @@ public class BookingServiceTest {
         verify(notificationService, times(1)).sendNotification(anyString());
         verifyNoMoreInteractions(bookingRepository, redisService, notificationService);
     }
-
-
-
 }

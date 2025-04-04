@@ -1,0 +1,277 @@
+package com.example.bookingappbs.service;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
+import static org.mockito.Mockito.when;
+
+import com.example.bookingappbs.dto.accommodation.AccommodationDto;
+import com.example.bookingappbs.dto.accommodation.CreateAccommodationRequestDto;
+import com.example.bookingappbs.dto.accommodation.UpdateAccommodationRequestDto;
+import com.example.bookingappbs.dto.address.AddressDto;
+import com.example.bookingappbs.mapper.AccommodationMapper;
+import com.example.bookingappbs.model.Accommodation;
+import com.example.bookingappbs.model.Accommodation.Type;
+import com.example.bookingappbs.model.Address;
+import com.example.bookingappbs.repository.AccommodationRepository;
+import com.example.bookingappbs.service.accommodation.AccommodationServiceImpl;
+import com.example.bookingappbs.service.notification.NotificationService;
+import java.math.BigDecimal;
+import java.util.List;
+import java.util.Optional;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.redis.core.RedisTemplate;
+
+@ExtendWith(MockitoExtension.class)
+public class AccommodationServiceTest {
+
+    @InjectMocks
+    private AccommodationServiceImpl accommodationService;
+
+    @Mock
+    private AccommodationRepository accommodationRepository;
+
+    @Mock
+    private AccommodationMapper accommodationMapper;
+
+    @Mock
+    private NotificationService notificationService;
+
+    @Mock
+    private RedisService redisService;
+
+    @Mock
+    private RedisTemplate<String, Object> redisTemplate;
+
+    private Address address;
+    private AddressDto addressDto;
+
+    @BeforeEach
+    void setUp() {
+        address = new Address()
+                .setCountry("Ukraine")
+                .setCity("Odesa")
+                .setStreet("Deribasovskaya str.")
+                .setHouse("1a")
+                .setApartment(1);
+
+        addressDto = new AddressDto(
+                1L,
+                address.getCountry(),
+                address.getCity(),
+                address.getStreet(),
+                address.getHouse(),
+                address.getApartment()
+        );
+    }
+
+    @Test
+    @DisplayName("Verify save() method works")
+    public void save_ValidCreateAccommodationRequestDto_ReturnAccommodationDto() {
+        // Given
+        CreateAccommodationRequestDto requestDto = new CreateAccommodationRequestDto(
+                Type.APARTMENT.toString(),
+                address,
+                "2 bedroom",
+                List.of("TV"),
+                BigDecimal.valueOf(50.0),
+                1
+        );
+        Accommodation accommodationToSave = new Accommodation()
+                .setType(Type.valueOf(requestDto.type()))
+                .setLocation(requestDto.location())
+                .setSize(requestDto.size())
+                .setAmenities(requestDto.amenities())
+                .setDailyRate(requestDto.dailyRate());
+        Accommodation savedAccommodation = new Accommodation()
+                .setId(1L)
+                .setType(accommodationToSave.getType())
+                .setLocation(accommodationToSave.getLocation())
+                .setSize(accommodationToSave.getSize())
+                .setAmenities(accommodationToSave.getAmenities())
+                .setDailyRate(accommodationToSave.getDailyRate());
+        AccommodationDto expectedDto = new AccommodationDto(
+                savedAccommodation.getId(),
+                savedAccommodation.getType(),
+                addressDto,
+                savedAccommodation.getSize(),
+                savedAccommodation.getAmenities(),
+                savedAccommodation.getDailyRate(),
+                savedAccommodation.getAvailability()
+        );
+
+        when(accommodationMapper.toModel(requestDto)).thenReturn(accommodationToSave);
+        when(accommodationRepository.save(accommodationToSave)).thenReturn(savedAccommodation);
+        when(accommodationMapper.toDto(savedAccommodation)).thenReturn(expectedDto);
+        doNothing().when(redisService).deletePattern("accommodations::all::*");
+        doNothing().when(redisService).save("accommodation::1", expectedDto);
+        doNothing().when(notificationService).sendNotification(anyString());
+
+        // When
+        AccommodationDto actualDto = accommodationService.save(requestDto);
+
+        // Then
+        assertThat(actualDto).isEqualTo(expectedDto);
+        verify(accommodationMapper, times(1)).toModel(requestDto);
+        verify(accommodationRepository, times(1)).save(accommodationToSave);
+        verify(accommodationMapper, times(1)).toDto(savedAccommodation);
+        verify(redisService, times(1)).deletePattern("accommodations::all::*");
+        verify(redisService, times(1)).save("accommodation::1", expectedDto);
+        verify(notificationService, times(1)).sendNotification(anyString());
+        verifyNoMoreInteractions(accommodationRepository, accommodationMapper,
+                redisService, notificationService);
+    }
+
+    @Test
+    @DisplayName("Verify findAll() method works and returns cached data")
+    public void findAll_ExistingCache_ReturnCachedAccommodations() {
+        // Given
+        Pageable pageable = PageRequest.of(0, 10);
+        String key = "accommodations::all::page:0::size:10";
+        List<AccommodationDto> cachedAccommodations = List.of(
+                new AccommodationDto(
+                        1L,
+                        Type.APARTMENT,
+                        null,
+                        "2 bedroom",
+                        List.of(),
+                        BigDecimal.TEN,
+                        1)
+        );
+        when(redisService.findAll(key, AccommodationDto.class)).thenReturn(cachedAccommodations);
+
+        // When
+        List<AccommodationDto> result = accommodationService.findAll(pageable);
+
+        // Then
+        assertThat(result).isEqualTo(cachedAccommodations);
+        verify(redisService, times(1)).findAll(key, AccommodationDto.class);
+        verifyNoMoreInteractions(accommodationRepository, accommodationMapper, redisService);
+    }
+
+    @Test
+    @DisplayName("Verify findAccommodationById() method works and returns cached data")
+    public void findAccommodationById_ExistingCache_ReturnCachedAccommodation() {
+        // Given
+        Long accommodationId = 1L;
+        String key = "accommodation::" + accommodationId;
+        AccommodationDto cachedDto = new AccommodationDto(
+                accommodationId,
+                Type.APARTMENT,
+                null,
+                "2 bedroom",
+                List.of(),
+                BigDecimal.TEN,
+                1
+        );
+        when(redisService.find(key, AccommodationDto.class)).thenReturn(cachedDto);
+
+        // When
+        AccommodationDto result = accommodationService.findAccommodationById(accommodationId);
+
+        // Then
+        assertThat(result).isEqualTo(cachedDto);
+        verify(redisService, times(1)).find(key, AccommodationDto.class);
+        verifyNoMoreInteractions(accommodationRepository, accommodationMapper, redisService);
+    }
+
+    @Test
+    @DisplayName("Verify updateAccommodationById() method works")
+    public void updateAccommodationById_ValidIdAndRequestDto_ReturnUpdatedAccommodationDto() {
+        // Given
+        Long accommodationId = 1L;
+        UpdateAccommodationRequestDto requestDto = new UpdateAccommodationRequestDto(
+                Type.HOUSE,
+                address,
+                "2 bedroom",
+                null,
+                BigDecimal.valueOf(80.0),
+                1
+        );
+        Accommodation existingAccommodation = new Accommodation()
+                .setId(accommodationId)
+                .setType(Type.APARTMENT)
+                .setLocation(address)
+                .setSize("1 bedroom")
+                .setDailyRate(BigDecimal.valueOf(60.0))
+                .setAvailability(2);
+        Accommodation updatedAccommodation = new Accommodation()
+                .setId(accommodationId)
+                .setType(requestDto.type())
+                .setLocation(requestDto.location())
+                .setSize(requestDto.size())
+                .setDailyRate(requestDto.dailyRate())
+                .setAvailability(requestDto.availability());
+        AccommodationDto expectedDto = new AccommodationDto(
+                updatedAccommodation.getId(),
+                updatedAccommodation.getType(),
+                addressDto,
+                updatedAccommodation.getSize(),
+                updatedAccommodation.getAmenities(),
+                updatedAccommodation.getDailyRate(),
+                updatedAccommodation.getAvailability()
+        );
+
+        when(accommodationRepository.findById(accommodationId))
+                .thenReturn(Optional.of(existingAccommodation));
+        when(accommodationRepository.save(any(Accommodation.class)))
+                .thenReturn(updatedAccommodation);
+        when(accommodationMapper.toDto(updatedAccommodation)).thenReturn(expectedDto);
+        doNothing().when(redisService).deletePattern("accommodations::all::*");
+        doNothing().when(redisService).save("accommodation::1", expectedDto);
+
+        // When
+        AccommodationDto actualDto = accommodationService
+                .updateAccommodationById(accommodationId, requestDto);
+
+        // Then
+        assertThat(actualDto).isEqualTo(expectedDto);
+        verify(accommodationRepository, times(1)).findById(accommodationId);
+        verify(accommodationRepository, times(1)).save(existingAccommodation);
+        verify(accommodationMapper, times(1)).toDto(updatedAccommodation);
+        verify(redisService, times(1)).deletePattern("accommodations::all::*");
+        verify(redisService, times(1)).save("accommodation::1", expectedDto);
+        verifyNoMoreInteractions(accommodationRepository, accommodationMapper, redisService);
+    }
+
+    @Test
+    @DisplayName("Verify deleteAccommodationById() method works")
+    public void deleteAccommodationById_ValidId_DeletesAccommodationAndSendsNotification() {
+        // Given
+        Long accommodationId = 1L;
+        Accommodation accommodationToDelete = new Accommodation()
+                .setId(accommodationId)
+                .setType(Type.VACATION_HOME)
+                .setLocation(address)
+                .setDailyRate(BigDecimal.valueOf(200.0));
+        when(accommodationRepository.getAccommodationById(accommodationId))
+                .thenReturn(accommodationToDelete);
+        doNothing().when(accommodationRepository).deleteById(accommodationId);
+        doNothing().when(redisService).deletePattern("accommodations::all::*");
+        doNothing().when(redisService).delete("accommodation::1");
+        doNothing().when(notificationService).sendNotification(anyString());
+
+        // When
+        accommodationService.deleteAccommodationById(accommodationId);
+
+        // Then
+        verify(redisService, times(1)).deletePattern("accommodations::all::*");
+        verify(redisService, times(1)).delete("accommodation::1");
+        verify(accommodationRepository, times(1)).getAccommodationById(accommodationId);
+        verify(accommodationRepository, times(1)).deleteById(accommodationId);
+        verify(notificationService, times(1)).sendNotification(anyString());
+        verifyNoMoreInteractions(accommodationRepository, redisService, notificationService);
+    }
+}
