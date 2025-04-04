@@ -19,6 +19,7 @@ import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import lombok.experimental.Accessors;
 import org.hibernate.annotations.SQLDelete;
 import org.hibernate.annotations.Where;
 
@@ -26,6 +27,7 @@ import org.hibernate.annotations.Where;
 @Getter
 @Setter
 @NoArgsConstructor
+@Accessors(chain = true)
 @EqualsAndHashCode(of = {"checkInDate", "user"})
 @SQLDelete(sql = "UPDATE bookings SET is_deleted=true WHERE id=?")
 @CheckoutLaterCheckin

@@ -118,8 +118,8 @@ public class BookingControllerTest {
                 .setRole(Role.CUSTOMER);
 
         createBookingRequestDto = new CreateBookingRequestDto(
-                LocalDate.of(2027, 4, 5),
-                LocalDate.of(2027, 4, 10),
+                LocalDate.now(),
+                LocalDate.now().plusDays(2),
                 1L
         );
 
@@ -133,8 +133,8 @@ public class BookingControllerTest {
         );
 
         updateBookingRequestDto = new UpdateBookingRequestDto(
-                LocalDate.of(2027, 5, 1),
-                LocalDate.of(2027, 5, 5),
+                LocalDate.now(),
+                LocalDate.now().plusDays(2),
                 2L,
                 "CONFIRMED"
         );
