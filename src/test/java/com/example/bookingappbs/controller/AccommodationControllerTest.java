@@ -68,6 +68,11 @@ public class AccommodationControllerTest {
     @SpyBean
     private AccommodationService accommodationService;
 
+    private Address address;
+    private AddressDto addressDto;
+    private CreateAccommodationRequestDto createRequestDto;
+    private UpdateAccommodationRequestDto updateRequestDto;
+
     @BeforeEach
     void beforeEach(@Autowired WebApplicationContext applicationContext,
                     @Autowired DataSource dataSource) throws SQLException {
@@ -83,6 +88,40 @@ public class AccommodationControllerTest {
                     new ClassPathResource("database/accommodations/add-three-accommodations.sql")
             );
         }
+
+        address = new Address()
+                .setCountry("Ukraine")
+                .setCity("Odesa")
+                .setStreet("Deribasovskaya str.")
+                .setHouse("1a")
+                .setApartment(1);
+
+        addressDto = new AddressDto(
+                null, // ID буде згенеровано базою даних
+                address.getCountry(),
+                address.getCity(),
+                address.getStreet(),
+                address.getHouse(),
+                address.getApartment()
+        );
+
+        createRequestDto = new CreateAccommodationRequestDto(
+                "APARTMENT",
+                address,
+                "1 bedroom",
+                List.of("parking", "wi-fi"),
+                BigDecimal.valueOf(50.50),
+                1
+        );
+
+        updateRequestDto = new UpdateAccommodationRequestDto(
+                null,
+                null,
+                null,
+                List.of(),
+                BigDecimal.valueOf(99),
+                null
+        );
     }
 
     @AfterEach
@@ -106,47 +145,23 @@ public class AccommodationControllerTest {
     @DisplayName("Create accommodation")
     void createAccommodation_ValidCreateAccommodationRequestDto_Ok() throws Exception {
         // Given
-        Address address = new Address();
-        address.setCountry("Ukraine");
-        address.setCity("Odesa");
-        address.setStreet("Deribasovskaya str.");
-        address.setHouse("1a");
-        address.setApartment(1);
-
-        CreateAccommodationRequestDto requestDto = new CreateAccommodationRequestDto(
-                "APARTMENT",
-                address,
-                "1 bedroom",
-                List.of("parking", "wi-fi"),
-                BigDecimal.valueOf(50.50),
-                1
-        );
-
-        AddressDto addressDto = new AddressDto(
-                address.getId(),
-                address.getCountry(),
-                address.getCity(),
-                address.getStreet(),
-                address.getHouse(),
-                address.getApartment()
-        );
         AccommodationDto expected = new AccommodationDto(
                 1L,
-                Accommodation.Type.valueOf(requestDto.type()),
+                Accommodation.Type.valueOf(createRequestDto.type()),
                 addressDto,
-                requestDto.size(),
-                requestDto.amenities(),
-                requestDto.dailyRate(),
-                requestDto.availability()
+                createRequestDto.size(),
+                createRequestDto.amenities(),
+                createRequestDto.dailyRate(),
+                createRequestDto.availability()
         );
 
-        String jsonRequest = objectMapper.writeValueAsString(requestDto);
+        String jsonRequest = objectMapper.writeValueAsString(createRequestDto);
 
         //When
         MvcResult result = mockMvc.perform(
-                post("/accommodations")
-                        .content(jsonRequest)
-                        .contentType(MediaType.APPLICATION_JSON)
+                        post("/accommodations")
+                                .content(jsonRequest)
+                                .contentType(MediaType.APPLICATION_JSON)
                 )
                 .andExpect(status().isCreated())
                 .andReturn();
@@ -190,7 +205,7 @@ public class AccommodationControllerTest {
 
         List<AccommodationDto> expected = new ArrayList<>();
         expected.add(new AccommodationDto(
-            1L,
+                1L,
                 Type.APARTMENT,
                 address1,
                 "1 bedroom",
@@ -219,7 +234,7 @@ public class AccommodationControllerTest {
 
         //When
         MvcResult result = mockMvc.perform(get("/accommodations")
-                .contentType(MediaType.APPLICATION_JSON))
+                        .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andReturn();
 
@@ -239,7 +254,7 @@ public class AccommodationControllerTest {
     void getAccommodationById_GivenAccommodationInCatalog_Ok() throws Exception {
         //Given
         Long id = 1L;
-        AddressDto address = new AddressDto(
+        AddressDto expectedAddressDto = new AddressDto(
                 1L,
                 "Ukraine",
                 "Odesa"
@@ -250,7 +265,7 @@ public class AccommodationControllerTest {
         AccommodationDto expected = new AccommodationDto(
                 1L,
                 Type.APARTMENT,
-                address,
+                expectedAddressDto,
                 "1 bedroom",
                 List.of(),
                 BigDecimal.valueOf(55),
@@ -259,7 +274,7 @@ public class AccommodationControllerTest {
 
         //When
         MvcResult result = mockMvc.perform(get("/accommodations/{id}", id)
-                .contentType(MediaType.APPLICATION_JSON))
+                        .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andReturn();
 
@@ -271,20 +286,12 @@ public class AccommodationControllerTest {
         EqualsBuilder.reflectionEquals(expected, actual, "id");
     }
 
-    @Test
     @WithMockUser(username = "admin", roles = {"ADMIN"})
+    @Test
     @DisplayName("Update accommodation by id")
     void updateAccommodationById_GivenValidAccommodation_Ok() throws Exception {
         //Given
-        UpdateAccommodationRequestDto requestDto = new UpdateAccommodationRequestDto(
-                null,
-                null,
-                null,
-                List.of(),
-                BigDecimal.valueOf(99),
-                null
-        );
-        AddressDto address = new AddressDto(
+        AddressDto expectedAddressDto = new AddressDto(
                 1L,
                 "Ukraine",
                 "Odesa"
@@ -295,20 +302,20 @@ public class AccommodationControllerTest {
         AccommodationDto expected = new AccommodationDto(
                 1L,
                 Type.APARTMENT,
-                address,
+                expectedAddressDto,
                 "1 bedroom",
                 List.of(),
-                requestDto.dailyRate(),
+                updateRequestDto.dailyRate(),
                 10
         );
 
-        String jsonRequest = objectMapper.writeValueAsString(requestDto);
+        String jsonRequest = objectMapper.writeValueAsString(updateRequestDto);
 
         //When
         Long id = 1L;
         MvcResult result = mockMvc.perform(patch("/accommodations/{id}", id)
                         .content(jsonRequest)
-                .contentType(MediaType.APPLICATION_JSON))
+                        .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andReturn();
 
