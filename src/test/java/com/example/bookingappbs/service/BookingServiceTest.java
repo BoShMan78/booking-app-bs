@@ -31,6 +31,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -65,39 +66,52 @@ public class BookingServiceTest {
     @Mock
     private AccommodationMapper accommodationMapper;
 
-    @Test
-    @WithMockUser(username = "user", roles = {"CUSTOMER"})
-    @DisplayName("Verify save() method works")
-    public void save_ValidCreateBookingRequestDto_ReturnBookingDto() {
-        //Given
-        Address address = new Address();
-        address.setCountry("Ukraine");
-        address.setCity("Odesa");
-        address.setStreet("Deribasovskaya str.");
-        address.setHouse("1a");
-        address.setApartment(1);
+    private Address address;
+    private Long accommodationId;
+    private Accommodation accommodation;
+    private CreateBookingRequestDto createBookingRequestDto;
+    private User user;
+    private Booking booking;
+    private BookingDto bookingDto;
+    private Long userId;
+    private Pageable pageable;
+    private String allBookingsCacheKey;
+    private String userBookingsCacheKey;
+    private Long bookingId;
+    private String singleBookingCacheKey;
+    private UpdateBookingRequestDto updateBookingRequestDto;
+    private User admin;
 
-        Long accommodationId = 1L;
-        Accommodation accommodation = new Accommodation().setId(accommodationId)
+    @BeforeEach
+    void setUp() {
+        address = new Address()
+                .setCountry("Ukraine")
+                .setCity("Odesa")
+                .setStreet("Deribasovskaya str.")
+                .setHouse("1a")
+                .setApartment(1);
+
+        accommodationId = 1L;
+        accommodation = new Accommodation().setId(accommodationId)
                 .setType(Type.APARTMENT)
                 .setLocation(address)
                 .setDailyRate(BigDecimal.valueOf(75.50));
 
-        CreateBookingRequestDto requestDto = new CreateBookingRequestDto(
+        createBookingRequestDto = new CreateBookingRequestDto(
                 LocalDate.of(2027, 01, 15),
                 LocalDate.of(2027, 01, 18),
                 accommodationId
         );
 
-        User user = new User();
-        user.setId(1L);
+        userId = 1L;
+        user = new User().setId(userId);
 
-        Booking booking = new Booking().setCheckInDate(requestDto.checkInDate())
-                .setCheckOutDate(requestDto.checkOutDate())
+        booking = new Booking().setCheckInDate(createBookingRequestDto.checkInDate())
+                .setCheckOutDate(createBookingRequestDto.checkOutDate())
                 .setAccommodation(accommodation)
                 .setUser(user);
 
-        BookingDto bookingDto = new BookingDto(
+        bookingDto = new BookingDto(
                 null,
                 booking.getCheckInDate(),
                 booking.getCheckOutDate(),
@@ -106,9 +120,35 @@ public class BookingServiceTest {
                 Status.PENDING.toString()
         );
 
-        //When
-        when(paymentService.countPendingPaymentsForUser(user.getId())).thenReturn(0L);
-        when(bookingMapper.toModel(requestDto)).thenReturn(booking);
+        pageable = PageRequest.of(0, 10);
+        allBookingsCacheKey = "bookings::all::page:" + pageable.getPageNumber()
+                + "::size:" + pageable.getPageSize()
+                + "::sort:" + pageable.getSort();
+        userBookingsCacheKey = "bookings::user::" + userId
+                + "::page::" + pageable.getPageNumber()
+                + "::size::" + pageable.getPageSize()
+                + "::sort::" + pageable.getSort();
+
+        bookingId = 1L;
+        singleBookingCacheKey = "booking::" + bookingId;
+
+        updateBookingRequestDto = new UpdateBookingRequestDto(
+                null,
+                null,
+                null,
+                Status.CONFIRMED.toString()
+        );
+
+        admin = new User().setId(2L).setRole(Role.ADMIN);
+    }
+
+    @Test
+    @WithMockUser(username = "user", roles = {"CUSTOMER"})
+    @DisplayName("Verify save() method works")
+    public void save_ValidCreateBookingRequestDto_ReturnBookingDto() {
+        //Given
+        when(paymentService.countPendingPaymentsForUser(userId)).thenReturn(0L);
+        when(bookingMapper.toModel(createBookingRequestDto)).thenReturn(booking);
         when(accommodationRepository.findById(accommodationId))
                 .thenReturn(Optional.of(accommodation));
         when(bookingRepository
@@ -121,12 +161,14 @@ public class BookingServiceTest {
         Mockito.when(bookingRepository.save(any(Booking.class))).thenReturn(booking);
         when(bookingMapper.toDto(booking)).thenReturn(bookingDto);
 
-        BookingDto savedBookingDto = bookingService.save(user, requestDto);
+
+        //When
+        BookingDto savedBookingDto = bookingService.save(user, createBookingRequestDto);
 
         //Then
         assertThat(savedBookingDto).isEqualTo(bookingDto);
-        verify(paymentService, times(1)).countPendingPaymentsForUser(user.getId());
-        verify(bookingMapper, times(1)).toModel(requestDto);
+        verify(paymentService, times(1)).countPendingPaymentsForUser(userId);
+        verify(bookingMapper, times(1)).toModel(createBookingRequestDto);
         verify(accommodationRepository, times(1)).findById(accommodationId);
         verify(bookingRepository, times(1))
                 .existsByAccommodationAndCheckInDateLessThanAndCheckOutDateGreaterThan(
@@ -150,19 +192,17 @@ public class BookingServiceTest {
     @DisplayName("Verify getBookingsByUserAndStatus() method works and fetches from DB and caches")
     public void getBookingsByUserAndStatus_NoCache_FetchFromDbAndCache() {
         // Given
-        Long userId = 1L;
         Status status = Status.PENDING;
-        Pageable pageable = PageRequest.of(0, 10);
         String key = "bookings::user::" + userId + "::status::" + status
                 + "::page::" + pageable.getPageNumber()
                 + "::size::" + pageable.getPageSize()
                 + "::sort::" + pageable.getSort();
         when(redisService.findAll(key, BookingDto.class)).thenReturn(null);
-        Page<Booking> bookingPage = new PageImpl<>(List.of(new Booking().setId(1L)));
+        Page<Booking> bookingPage = new PageImpl<>(List.of(new Booking().setId(bookingId)));
         when(bookingRepository.findByUserIdAndStatus(userId, status, pageable))
                 .thenReturn(bookingPage);
         List<BookingDto> bookingDtos = List.of(new BookingDto(
-                userId,
+                bookingId,
                 null,
                 null,
                 null,
@@ -188,28 +228,15 @@ public class BookingServiceTest {
     @DisplayName("Verify getBookingsByUser() method works and returns cached data")
     public void getBookingsByUser_ExistingCache_ReturnCachedBookings() {
         // Given
-        User user = new User().setId(1L);
-        Pageable pageable = PageRequest.of(0, 10);
-        String key = "bookings::user::" + user.getId()
-                + "::page::" + pageable.getPageNumber()
-                + "::size::" + pageable.getPageSize()
-                + "::sort::" + pageable.getSort();
-        List<BookingDto> cachedBookings = List.of(new BookingDto(
-                null,
-                null,
-                null,
-                null,
-                null,
-                null
-        ));
-        when(redisService.findAll(key, BookingDto.class)).thenReturn(cachedBookings);
+        when(redisService.findAll(userBookingsCacheKey, BookingDto.class))
+                .thenReturn(List.of(bookingDto));
 
         // When
         List<BookingDto> result = bookingService.getBookingsByUser(user, pageable);
 
         // Then
-        assertThat(result).isEqualTo(cachedBookings);
-        verify(redisService, times(1)).findAll(key, BookingDto.class);
+        assertThat(result).isEqualTo(List.of(bookingDto));
+        verify(redisService, times(1)).findAll(userBookingsCacheKey, BookingDto.class);
         verifyNoMoreInteractions(bookingRepository, bookingMapper, redisService);
     }
 
@@ -217,20 +244,8 @@ public class BookingServiceTest {
     @DisplayName("Verify getBookingById() method works and fetches from DB and caches")
     public void getBookingById_NoCache_FetchFromDbAndCache() {
         // Given
-        User user = new User().setId(1L);
-        Long bookingId = 1L;
-        String key = "booking::" + bookingId;
-        when(redisService.find(key, BookingDto.class)).thenReturn(null);
-        Booking booking = new Booking().setId(bookingId);
+        when(redisService.find(singleBookingCacheKey, BookingDto.class)).thenReturn(null);
         when(bookingRepository.findById(bookingId)).thenReturn(Optional.of(booking));
-        BookingDto bookingDto = new BookingDto(
-                bookingId,
-                null,
-                null,
-                null,
-                null,
-                null
-        );
         when(bookingMapper.toDto(booking)).thenReturn(bookingDto);
 
         // When
@@ -238,10 +253,10 @@ public class BookingServiceTest {
 
         // Then
         assertThat(result).isEqualTo(bookingDto);
-        verify(redisService, times(1)).find(key, BookingDto.class);
+        verify(redisService, times(1)).find(singleBookingCacheKey, BookingDto.class);
         verify(bookingRepository, times(1)).findById(bookingId);
         verify(bookingMapper, times(1)).toDto(booking);
-        verify(redisService, times(1)).save(key, bookingDto);
+        verify(redisService, times(1)).save(singleBookingCacheKey, bookingDto);
         verifyNoMoreInteractions(bookingRepository, bookingMapper, redisService);
     }
 
@@ -249,41 +264,23 @@ public class BookingServiceTest {
     @DisplayName("Verify updateBookingById() method works for admin updating status")
     public void updateBookingById_AdminUpdateStatus_Success() {
         // Given
-        User admin = new User().setId(1L).setRole(Role.ADMIN);
-        Long bookingId = 1L;
-        UpdateBookingRequestDto requestDto = new UpdateBookingRequestDto(
-                null,
-                null,
-                null,
-                Status.CONFIRMED.toString()
-        );
-        Booking existingBooking = new Booking().setId(bookingId).setStatus(Status.PENDING);
-        when(bookingRepository.findById(bookingId)).thenReturn(Optional.of(existingBooking));
-        Booking updatedBooking = new Booking().setId(bookingId).setStatus(Status.CONFIRMED);
-        when(bookingRepository.save(any(Booking.class))).thenReturn(updatedBooking);
-        BookingDto updatedBookingDto = new BookingDto(
-                bookingId,
-                null,
-                null,
-                null,
-                null,
-                Status.CONFIRMED.toString()
-        );
-        when(bookingMapper.toDto(updatedBooking)).thenReturn(updatedBookingDto);
+        when(bookingRepository.findById(bookingId)).thenReturn(Optional.of(booking));
+        when(bookingRepository.save(any(Booking.class))).thenReturn(booking);
+        when(bookingMapper.toDto(booking)).thenReturn(bookingDto);
 
         // When
-        BookingDto result = bookingService.updateBookingById(admin, bookingId, requestDto);
+        BookingDto result = bookingService.updateBookingById(admin, bookingId, updateBookingRequestDto);
 
         // Then
-        assertThat(result).isEqualTo(updatedBookingDto);
-        assertThat(existingBooking.getStatus()).isEqualTo(Status.CONFIRMED);
+        assertThat(result).isEqualTo(bookingDto);
+        assertThat(booking.getStatus()).isEqualTo(Status.CONFIRMED);
         verify(bookingRepository, times(1)).findById(bookingId);
-        verify(bookingRepository, times(1)).save(existingBooking);
-        verify(bookingMapper, times(1)).toDto(existingBooking);
+        verify(bookingRepository, times(1)).save(booking);
+        verify(bookingMapper, times(1)).toDto(booking);
         verify(redisService, times(1)).deletePattern("bookings::all::*");
         verify(redisService, times(1)).deletePattern("bookings::user::*");
         verify(redisService, times(1))
-                .save(eq("booking::" + bookingId), eq(updatedBookingDto));
+                .save(eq("booking::" + bookingId), eq(bookingDto));
         verifyNoMoreInteractions(bookingRepository, bookingMapper, redisService);
     }
 
@@ -291,30 +288,29 @@ public class BookingServiceTest {
     @DisplayName("Verify deleteBookingById() method cancels booking and sends notification")
     public void deleteBookingById_ValidId_CancelBookingAndSendNotification() {
         // Given
-        User user = new User().setId(1L);
-        Long bookingId = 1L;
-        Accommodation accommodation = new Accommodation().setId(2L).setType(Type.APARTMENT)
+        Accommodation accommodationToDelete = new Accommodation().setId(2L).setType(Type.APARTMENT)
                 .setLocation(new Address().setStreet("Test").setHouse("1"));
-        Booking existingBooking = new Booking().setId(bookingId)
+        Booking existingBookingToDelete = new Booking().setId(bookingId)
                 .setStatus(Status.PENDING)
-                .setAccommodation(accommodation)
+                .setAccommodation(accommodationToDelete)
                 .setCheckInDate(LocalDate.now())
                 .setCheckOutDate(LocalDate.now().plusDays(2));
-        when(bookingRepository.findById(bookingId)).thenReturn(Optional.of(existingBooking));
         Booking canceledBooking = new Booking().setId(bookingId)
                 .setStatus(Status.CANCELED)
-                .setAccommodation(accommodation)
+                .setAccommodation(accommodationToDelete)
                 .setCheckInDate(LocalDate.now())
                 .setCheckOutDate(LocalDate.now().plusDays(2));
+        when(bookingRepository.findById(bookingId))
+                .thenReturn(Optional.of(existingBookingToDelete));
         when(bookingRepository.save(any(Booking.class))).thenReturn(canceledBooking);
 
         // When
         bookingService.deleteBookingById(user, bookingId);
 
         // Then
-        assertThat(existingBooking.getStatus()).isEqualTo(Status.CANCELED);
+        assertThat(existingBookingToDelete.getStatus()).isEqualTo(Status.CANCELED);
         verify(bookingRepository, times(1)).findById(bookingId);
-        verify(bookingRepository, times(1)).save(existingBooking);
+        verify(bookingRepository, times(1)).save(existingBookingToDelete);
         verify(redisService, times(1)).deletePattern("bookings::all::*");
         verify(redisService, times(1)).deletePattern("bookings::user::*");
         verify(redisService, times(1)).delete("booking::" + bookingId);
