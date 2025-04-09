@@ -1,17 +1,22 @@
 package com.example.bookingappbs.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
 import com.example.bookingappbs.dto.booking.BookingDto;
 import com.example.bookingappbs.dto.booking.CreateBookingRequestDto;
 import com.example.bookingappbs.dto.booking.UpdateBookingRequestDto;
+import com.example.bookingappbs.exception.AccessDeniedException;
+import com.example.bookingappbs.exception.PendingPaymentException;
 import com.example.bookingappbs.mapper.AccommodationMapper;
 import com.example.bookingappbs.mapper.BookingMapper;
 import com.example.bookingappbs.model.Accommodation;
@@ -104,7 +109,7 @@ public class BookingServiceTest {
         );
 
         userId = 1L;
-        user = new User().setId(userId);
+        user = new User().setId(userId).setRole(Role.CUSTOMER);
 
         booking = new Booking().setCheckInDate(createBookingRequestDto.checkInDate())
                 .setCheckOutDate(createBookingRequestDto.checkOutDate())
@@ -186,6 +191,22 @@ public class BookingServiceTest {
 
         verifyNoMoreInteractions(bookingRepository, bookingMapper, paymentService, redisService,
                 accommodationRepository, notificationService);
+    }
+
+    @Test
+    @DisplayName("save should throw PendingPaymentException if user has pending payments")
+    void save_UserWithPendingPayments_ThrowsPendingPaymentException() {
+        // When
+        when(paymentService.countPendingPaymentsForUser(user.getId())).thenReturn(1L);
+
+        PendingPaymentException exception = assertThrows(PendingPaymentException.class,
+                () -> bookingService.save(user, createBookingRequestDto));
+
+        // Then
+        assertEquals("There are already pending payments for the user", exception.getMessage());
+        verify(paymentService).countPendingPaymentsForUser(user.getId());
+        verifyNoInteractions(bookingRepository, bookingMapper, accommodationRepository,
+                redisService, notificationService);
     }
 
     @Test
@@ -282,6 +303,43 @@ public class BookingServiceTest {
         verify(redisService, times(1))
                 .save(eq("booking::" + bookingId), eq(bookingDto));
         verifyNoMoreInteractions(bookingRepository, bookingMapper, redisService);
+    }
+
+    @Test
+    @DisplayName("updateBookingById should throw AccessDeniedException "
+            + "for CUSTOMER trying to update status")
+    void updateBookingById_Customer_UpdateStatus_ThrowsAccessDeniedException() {
+        // Given
+        Long bookingIdToUpdate = 1L;
+        UpdateBookingRequestDto updateDto = new UpdateBookingRequestDto(
+                LocalDate.of(2027, 01, 16),
+                LocalDate.of(2027, 01, 19),
+                2L,
+                Status.CONFIRMED.toString()
+        );
+        Booking existingBooking = new Booking()
+                .setId(bookingIdToUpdate)
+                .setCheckInDate(LocalDate.now())
+                .setCheckOutDate(LocalDate.now().plusDays(3))
+                .setAccommodation(new Accommodation())
+                .setUser(user)
+                .setStatus(Status.PENDING);
+
+        when(bookingRepository.findById(bookingIdToUpdate))
+                .thenReturn(Optional.of(existingBooking));
+
+        // When
+        AccessDeniedException exception = assertThrows(AccessDeniedException.class,
+                () -> bookingService.updateBookingById(user, bookingIdToUpdate, updateDto));
+
+        // Then
+        assertEquals("The user does not have permission to change the booking status. "
+                        + "Please contact the administrator.",
+                exception.getMessage());
+        verify(bookingRepository).findById(bookingIdToUpdate);
+        verifyNoInteractions(bookingMapper, accommodationRepository, paymentService, redisService,
+                notificationService, userRepository, accommodationMapper);
+        assertEquals(Status.PENDING, existingBooking.getStatus(), "Status should not be updated");
     }
 
     @Test

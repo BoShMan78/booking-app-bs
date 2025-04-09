@@ -1,12 +1,15 @@
 package com.example.bookingappbs.service;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import com.example.bookingappbs.dto.payment.CreatePaymentRequestDto;
 import com.example.bookingappbs.dto.payment.PaymentDto;
+import com.example.bookingappbs.exception.EntityNotFoundException;
 import com.example.bookingappbs.mapper.PaymentMapper;
 import com.example.bookingappbs.model.Booking;
 import com.example.bookingappbs.model.Payment;
@@ -233,6 +236,18 @@ public class PaymentServiceTest {
         assertEquals(newSessionUrl, testPayment.getSessionUrl());
         verify(paymentRepository).findById(testPaymentId);
         verify(paymentRepository).save(testPayment);
+    }
+
+    @Test
+    @DisplayName("Verify updateSessionIdAndUrl() method throws EntityNotFoundException")
+    void updateSessionIdAndUrl_NonExistingPaymentId_ThrowsEntityNotFoundException() {
+        when(paymentRepository.findById(testPaymentId)).thenReturn(Optional.empty());
+
+        EntityNotFoundException exception = assertThrows(EntityNotFoundException.class,
+                () -> paymentService.updateSessionIdAndUrl(testPaymentId, "new_id", "new_url"));
+
+        assertEquals("Cannot find payment with id: " + testPaymentId, exception.getMessage());
+        verify(paymentRepository).findById(testPaymentId);
     }
 
     @Test

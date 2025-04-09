@@ -1,10 +1,13 @@
 package com.example.bookingappbs.service;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.verify;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
@@ -12,6 +15,7 @@ import com.example.bookingappbs.dto.user.UpdateCurrentUserRequestDto;
 import com.example.bookingappbs.dto.user.UpdateUserRoleRequestDto;
 import com.example.bookingappbs.dto.user.UserRegistrationRequestDto;
 import com.example.bookingappbs.dto.user.UserResponseDto;
+import com.example.bookingappbs.exception.RegistrationException;
 import com.example.bookingappbs.mapper.UserMapper;
 import com.example.bookingappbs.model.User;
 import com.example.bookingappbs.model.User.Role;
@@ -121,6 +125,21 @@ public class UserServiceTest {
         verify(userRepository, times(1)).save(userToSave);
         verify(userMapper, times(1)).toDto(savedUser);
         verifyNoMoreInteractions(userRepository, userMapper, passwordEncoder);
+    }
+
+    @Test
+    @DisplayName("register should throw RegistrationException if user with email already exists")
+    void register_ExistingEmail_ThrowsRegistrationException() {
+        // When
+        when(userRepository.existsByEmail(registrationRequestDto.email())).thenReturn(true);
+
+        RegistrationException exception = assertThrows(RegistrationException.class,
+                () -> userService.register(registrationRequestDto));
+
+        // Then
+        assertEquals("User with email: test@example.com already exist", exception.getMessage());
+        verify(userRepository).existsByEmail(registrationRequestDto.email());
+        verifyNoInteractions(userMapper, passwordEncoder);
     }
 
     @Test
