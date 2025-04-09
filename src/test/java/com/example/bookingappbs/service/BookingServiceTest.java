@@ -166,7 +166,6 @@ public class BookingServiceTest {
         Mockito.when(bookingRepository.save(any(Booking.class))).thenReturn(booking);
         when(bookingMapper.toDto(booking)).thenReturn(bookingDto);
 
-
         //When
         BookingDto savedBookingDto = bookingService.save(user, createBookingRequestDto);
 
@@ -290,7 +289,8 @@ public class BookingServiceTest {
         when(bookingMapper.toDto(booking)).thenReturn(bookingDto);
 
         // When
-        BookingDto result = bookingService.updateBookingById(admin, bookingId, updateBookingRequestDto);
+        BookingDto result = bookingService
+                .updateBookingById(admin, bookingId, updateBookingRequestDto);
 
         // Then
         assertThat(result).isEqualTo(bookingDto);

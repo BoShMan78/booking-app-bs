@@ -4,7 +4,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import com.example.bookingappbs.dto.payment.CreatePaymentRequestDto;
@@ -21,7 +20,6 @@ import com.example.bookingappbs.service.payment.PaymentServiceImpl;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -29,9 +27,9 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
 @ExtendWith(MockitoExtension.class)
@@ -104,10 +102,12 @@ public class PaymentServiceTest {
         Page<Payment> paymentPage = new PageImpl<>(payments, testPageable, payments.size());
 
         //When
-        when(paymentRepository.findByBooking_User_Id(testUserId, testPageable)).thenReturn(paymentPage);
+        when(paymentRepository.findByBooking_User_Id(testUserId, testPageable))
+                .thenReturn(paymentPage);
         when(paymentMapper.toDto(testPayment)).thenReturn(testPaymentDto);
 
-        List<PaymentDto> actualPayments = paymentService.getPaymentsForCurrentUser(testUserId, testPageable);
+        List<PaymentDto> actualPayments = paymentService
+                .getPaymentsForCurrentUser(testUserId, testPageable);
 
         //Then
         assertEquals(List.of(testPaymentDto), actualPayments);
@@ -273,7 +273,8 @@ public class PaymentServiceTest {
         long expectedCount = 1L;
 
         //When
-        when(paymentRepository.countByBooking_User_IdAndStatus(testUserId, Status.PENDING)).thenReturn(expectedCount);
+        when(paymentRepository.countByBooking_User_IdAndStatus(testUserId, Status.PENDING))
+                .thenReturn(expectedCount);
 
         long actualCount = paymentService.countPendingPaymentsForUser(testUserId);
 

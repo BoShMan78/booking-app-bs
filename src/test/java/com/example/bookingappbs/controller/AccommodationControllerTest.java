@@ -181,24 +181,24 @@ public class AccommodationControllerTest {
         AddressDto address1 = new AddressDto(
                 1L,
                 "Ukraine",
-                "Odesa"
-                ,"Deribasovskaya",
+                "Odesa",
+                "Deribasovskaya",
                 "1",
                 1
         );
         AddressDto address2 = new AddressDto(
                 2L,
                 "Ukraine",
-                "Kyiv"
-                ,"Khreshchatyk",
+                "Kyiv",
+                "Khreshchatyk",
                 "2",
                 null
         );
         AddressDto address3 = new AddressDto(
                 3L,
                 "Ukraine",
-                "Lviv"
-                ,"Rynok Square",
+                "Lviv",
+                "Rynok Square",
                 "4",
                 null
         );
@@ -242,7 +242,7 @@ public class AccommodationControllerTest {
         AccommodationDto[] actual = objectMapper.readValue(result.getResponse()
                 .getContentAsByteArray(), AccommodationDto[].class);
         Assertions.assertEquals(3, actual.length);
-        for (int i = 0; i < expected.size() ; i++) {
+        for (int i = 0; i < expected.size(); i++) {
             AccommodationDto expectedAccommodation = expected.get(i);
             AccommodationDto actualAccommodation = actual[i];
             EqualsBuilder.reflectionEquals(expectedAccommodation, actualAccommodation, "id");
@@ -257,8 +257,8 @@ public class AccommodationControllerTest {
         AddressDto expectedAddressDto = new AddressDto(
                 1L,
                 "Ukraine",
-                "Odesa"
-                ,"Deribasovskaya",
+                "Odesa",
+                "Deribasovskaya",
                 "1",
                 1
         );
@@ -294,8 +294,8 @@ public class AccommodationControllerTest {
         AddressDto expectedAddressDto = new AddressDto(
                 1L,
                 "Ukraine",
-                "Odesa"
-                ,"Deribasovskaya",
+                "Odesa",
+                "Deribasovskaya",
                 "1",
                 1
         );
