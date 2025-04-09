@@ -96,10 +96,12 @@ public class PaymentControllerTest {
     void createPaymentSession_ValidBookingId_ReturnsPaymentDto() throws Exception {
         // Given
         Long bookingId = 5L;
+
+        //When
         when(paymentProcessingService.createPaymentSession(eq(testUser), eq(bookingId)))
                 .thenReturn(paymentDto);
 
-        // When & Then
+        // Then
         mockMvc.perform(post("/payments")
                         .param("bookingId", bookingId.toString())
                         .with(authentication(getAuthenticationForUser(testUser)))
@@ -126,12 +128,14 @@ public class PaymentControllerTest {
     void getUserPayments_AuthenticatedUser_ReturnsPaymentList() throws Exception {
         // Given
         List<PaymentDto> userPayments = List.of(paymentDto);
+
+        //When
         when(paymentProcessingService.getPaymentsForCurrentUser(
                 eq(testUser.getId()),
                 eq(pageable))
         ).thenReturn(userPayments);
 
-        // When & Then
+        // Then
         mockMvc.perform(MockMvcRequestBuilders.get("/payments/my")
                         .with(authentication(getAuthenticationForUser(testUser)))
                         .param("page", "0")
@@ -149,9 +153,11 @@ public class PaymentControllerTest {
     void getAllPayments_AdminUser_ReturnsPaymentList() throws Exception {
         // Given
         List<PaymentDto> allPayments = List.of(paymentDto);
+
+        //When
         when(paymentProcessingService.getAllPayments(eq(pageable))).thenReturn(allPayments);
 
-        // When & Then
+        // Then
         mockMvc.perform(MockMvcRequestBuilders.get("/payments")
                         .with(authentication(getAuthenticationForUser(adminUser)))
                         .param("page", "0")
@@ -169,10 +175,12 @@ public class PaymentControllerTest {
         // Given
         String sessionId = "session_success_123";
         String successMessage = "Payment successful!";
+
+        //When
         when(paymentProcessingService.handlePaymentSuccess(eq(sessionId), any()))
                 .thenReturn("payment_success");
 
-        // When & Then
+        // Then
         mockMvc.perform(MockMvcRequestBuilders.get("/payments/success")
                         .param("session_id", sessionId)
                         .with(authentication(getAuthenticationForUser(testUser)))
@@ -189,10 +197,12 @@ public class PaymentControllerTest {
         // Given
         String sessionId = "session_cancel_456";
         String cancelMessage = "Payment was cancelled.";
+
+        //When
         when(paymentProcessingService.getPaymentCancelledMessage(eq(sessionId)))
                 .thenReturn(cancelMessage);
 
-        // When & Then
+        // Then
         mockMvc.perform(MockMvcRequestBuilders.get("/payments/cancel")
                         .param("session_id", sessionId)
                         .with(authentication(getAuthenticationForUser(testUser)))
@@ -211,13 +221,14 @@ public class PaymentControllerTest {
         Long paymentId = 15L;
         String message = "Payment is not expired";
 
+        //When
         when(paymentProcessingService.renewPaymentSession(
                 eq(paymentId),
                 eq(testUser),
                 any(Model.class)))
                 .thenReturn("payment_info");
 
-        // When & Then
+        // Then
         mockMvc.perform(post("/payments/renew/{paymentId}", paymentId)
                         .with(authentication(getAuthenticationForUser(testUser))))
                 .andExpect(status().isOk())

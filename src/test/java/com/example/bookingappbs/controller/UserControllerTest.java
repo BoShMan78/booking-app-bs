@@ -1,9 +1,11 @@
 package com.example.bookingappbs.controller;
 
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
+import static org.hamcrest.Matchers.is;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 
 import com.example.bookingappbs.dto.user.UpdateCurrentUserRequestDto;
 import com.example.bookingappbs.dto.user.UpdateUserRoleRequestDto;
@@ -13,41 +15,45 @@ import com.example.bookingappbs.model.User.Role;
 import com.example.bookingappbs.service.notification.TelegramService;
 import com.example.bookingappbs.service.user.UserService;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.sql.Connection;
+import java.sql.SQLException;
+import java.util.List;
+import javax.sql.DataSource;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.core.io.ClassPathResource;
+import org.springframework.jdbc.datasource.init.ScriptUtils;
 import org.springframework.http.MediaType;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.test.context.support.WithMockUser;
+import org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import org.springframework.web.context.WebApplicationContext;
 import org.telegram.telegrambots.meta.TelegramBotsApi;
 
-import java.util.List;
-
-@SpringBootTest
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 public class UserControllerTest {
+    protected MockMvc mockMvc;
 
-    @Autowired
-    private MockMvc mockMvc;
-
-    @MockBean
-    private UserService userService;
     @MockBean
     private TelegramBotsApi telegramBotsApi;
     @MockBean
     private TelegramService telegramService;
 
+    @Autowired
+    private UserService userService;
     @Autowired
     private ObjectMapper objectMapper;
 
@@ -59,7 +65,21 @@ public class UserControllerTest {
     private UpdateCurrentUserRequestDto updateCurrentUserRequestDto;
 
     @BeforeEach
-    void setUp() {
+    void setUp(@Autowired WebApplicationContext context,
+            @Autowired DataSource dataSource) throws SQLException {
+        mockMvc = MockMvcBuilders
+                .webAppContextSetup(context)
+                .apply(SecurityMockMvcConfigurers.springSecurity())
+                .build();
+        teardown(dataSource);
+        try (Connection connection = dataSource.getConnection()) {
+            connection.setAutoCommit(true);
+            ScriptUtils.executeSqlScript(
+                    connection,
+                    new ClassPathResource("database/users/add-test-user.sql")
+            );
+        }
+
         userId = 1L;
         email = "test@example.com";
 
@@ -71,8 +91,8 @@ public class UserControllerTest {
         userResponseDto = new UserResponseDto(
                 userId,
                 email,
-                "FirstName",
-                "LastName",
+                "Test",
+                "User",
                 Role.CUSTOMER.name()
         );
 
@@ -90,82 +110,71 @@ public class UserControllerTest {
         SecurityContextHolder.getContext().setAuthentication(authentication);
     }
 
+    static void teardown(DataSource dataSource) throws SQLException {
+        try (Connection connection = dataSource.getConnection()) {
+            connection.setAutoCommit(true);
+            ScriptUtils.executeSqlScript(
+                    connection,
+                    new ClassPathResource("database/users/drop-all-test-users.sql")
+            );
+        }
+    }
+
     @Test
-    @WithMockUser(roles = "ADMIN")
-    void updateUserRole_AdminUser_ShouldReturnOkAndUserResponse() throws Exception {
+    @WithMockUser(username = "admin", roles = {"ADMIN"})
+    @DisplayName("Update user role by ID - ADMIN")
+    void updateUserRole_AdminUser_ShouldReturnOkAndUpdatedUser() throws Exception {
         // Given
-        UserResponseDto adminResponseDto = new UserResponseDto(
-                userId,
-                null,
-                null,
-                null,
-                updateUserRoleRequestDto.role().name()
+        Long targetUserId = 1L;
+        SecurityContextHolder.getContext().setAuthentication(
+                new UsernamePasswordAuthenticationToken("admin", "password",
+                        List.of(new SimpleGrantedAuthority("ROLE_ADMIN")))
         );
-
-        //When
-        Authentication authentication = new UsernamePasswordAuthenticationToken(
-                "adminUser", null, List.of(new SimpleGrantedAuthority("ROLE_ADMIN")));
-        SecurityContextHolder.getContext().setAuthentication(authentication);
-
-        Mockito.when(userService.updateUserRole(eq(userId), any(UpdateUserRoleRequestDto.class)))
-                .thenReturn(adminResponseDto);
-
-        //Then
-        mockMvc.perform(MockMvcRequestBuilders.put("/users/{id}/role", userId)
+        // When & Then
+        mockMvc.perform(put("/users/{id}/role", targetUserId)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(updateUserRoleRequestDto)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.id").value(userId))
-                .andExpect(jsonPath("$.role").value(updateUserRoleRequestDto.role().name()));
-
-        Mockito.verify(userService)
-                .updateUserRole(eq(userId), any(UpdateUserRoleRequestDto.class));
+                .andExpect(jsonPath("$.id", is(targetUserId.intValue())))
+                .andExpect(jsonPath("$.role", is(updateUserRoleRequestDto.role().name())));
     }
 
-
     @Test
-    void getCurrentUser_AuthenticatedUser_ShouldReturnOkAndUserResponse() throws Exception {
-        // Given
-        Mockito.when(userService.getUser(mockUser)).thenReturn(userResponseDto);
-
-        // Then
-        mockMvc.perform(MockMvcRequestBuilders.get("/users/me"))
+    @WithMockUser(username = "test@example.com", roles = {"CUSTOMER"})
+    @DisplayName("Get current user - Authenticated")
+    void getCurrentUser_AuthenticatedUser_ShouldReturnOkAndUserDetails() throws Exception {
+        // When & Then
+        mockMvc.perform(get("/users/me"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.id").value(userId))
-                .andExpect(jsonPath("$.email").value(email))
-                .andExpect(jsonPath("$.firstName").value(userResponseDto.firstName()))
-                .andExpect(jsonPath("$.lastName").value(userResponseDto.lastName()))
-                .andExpect(jsonPath("$.role").value(userResponseDto.role()));
-
-        Mockito.verify(userService).getUser(mockUser);
+                .andExpect(jsonPath("$.id", is(userId.intValue())))
+                .andExpect(jsonPath("$.email", is(email)))
+                .andExpect(jsonPath("$.firstName", is("Test")))
+                .andExpect(jsonPath("$.lastName", is("User")))
+                .andExpect(jsonPath("$.role", is(Role.CUSTOMER.name())));
     }
 
     @Test
-    @WithMockUser(roles = {"CUSTOMER"})
-    void updateCurrentUser_ValidRequest_ShouldReturnUpdatedUser() throws Exception {
-        //Given
-        UserResponseDto updatedResponseDto = new UserResponseDto(
-                userId,
-                updateCurrentUserRequestDto.email(),
-                updateCurrentUserRequestDto.firstName(),
-                updateCurrentUserRequestDto.lastName(),
-                Role.CUSTOMER.toString()
+    @WithMockUser(username = "test@example.com", roles = {"CUSTOMER"})
+    @DisplayName("Update current user - Valid request")
+    void updateCurrentUser_ValidRequest_ShouldReturnUpdatedUserDetails() throws Exception {
+        // Given
+        String updatedFirstName = "Updated";
+        UpdateCurrentUserRequestDto updateDto = new UpdateCurrentUserRequestDto(
+                updatedFirstName,
+                "User",
+                "test@example.com",
+                "newPassword#1"
         );
 
-        // When
-        Mockito.when(userService.updateCurrentUserPatch(eq(mockUser),
-                any(UpdateCurrentUserRequestDto.class))).thenReturn(updatedResponseDto);
-
-        //Then
-        mockMvc.perform(MockMvcRequestBuilders.patch("/users/me")
+        // When & Then
+        mockMvc.perform(patch("/users/me")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(updateCurrentUserRequestDto)))
+                        .content(objectMapper.writeValueAsString(updateDto)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.id").value(userId))
-                .andExpect(jsonPath("$.email").value(updateCurrentUserRequestDto.email()))
-                .andExpect(jsonPath("$.firstName").value(updateCurrentUserRequestDto.firstName()))
-                .andExpect(jsonPath("$.lastName").value(updateCurrentUserRequestDto.lastName()));
-
-        Mockito.verify(userService).updateCurrentUserPatch(eq(mockUser), any(UpdateCurrentUserRequestDto.class));
+                .andExpect(jsonPath("$.id", is(userId.intValue())))
+                .andExpect(jsonPath("$.firstName", is(updatedFirstName)))
+                .andExpect(jsonPath("$.lastName", is("User")))
+                .andExpect(jsonPath("$.email", is("test@example.com")))
+                .andExpect(jsonPath("$.role", is(Role.CUSTOMER.name())));
     }
 }

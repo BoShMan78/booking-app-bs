@@ -69,11 +69,11 @@ public class AuthenticationControllerTest {
     @Test
     @DisplayName("POST /register - successful registration")
     void register_ValidInput_ReturnsCreatedUserResponse() throws Exception {
-        // Given
+        // When
         when(userService.register(any(UserRegistrationRequestDto.class)))
                 .thenReturn(registrationResponseDto);
 
-        // When & Then
+        // Then
         mockMvc.perform(MockMvcRequestBuilders.post("/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(registrationDto)))
@@ -90,11 +90,11 @@ public class AuthenticationControllerTest {
     @Test
     @DisplayName("POST /login - successful login")
     void login_ValidCredentials_ReturnsLoginResponse() throws Exception {
-        // Given
+        // When
         when(authenticationService.authenticate(any(UserLoginRequestDto.class)))
                 .thenReturn(loginResponseDto);
 
-        // When & Then
+        // Then
         mockMvc.perform(MockMvcRequestBuilders.post("/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(loginDto)))
