@@ -16,10 +16,12 @@ import redis.clients.jedis.JedisPoolConfig;
 
 @Configuration
 public class RedisConfig {
+    private static final String REDIS_HOST_NAME = "redis";
+
     @Bean
     public RedisConnectionFactory redisConnectionFactory() {
         RedisStandaloneConfiguration redisConfig = new RedisStandaloneConfiguration();
-        redisConfig.setHostName("localhost");
+        redisConfig.setHostName(REDIS_HOST_NAME);
         redisConfig.setPort(6379);
 
         JedisPoolConfig poolConfig = new JedisPoolConfig();

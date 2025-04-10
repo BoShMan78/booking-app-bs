@@ -19,7 +19,6 @@ public class RedisService {
     public <T> void save(String key, T value) {
         try {
             String json = objectMapper.writeValueAsString(value);
-            System.out.println("Saving to Redis: " + key + " -> " + value);
             redisTemplate.opsForValue().set(key, json);
         } catch (JsonProcessingException e) {
             throw new RuntimeException("Error saving to Redis: " + e);
@@ -31,7 +30,6 @@ public class RedisService {
         if (json == null) {
             return null;
         }
-        System.out.println("Retrieved from Redis: " + key + " -> " + json);
         try {
             return objectMapper.readValue(json, clazz);
         } catch (JsonProcessingException e) {
@@ -44,13 +42,11 @@ public class RedisService {
         if (json == null) {
             return Collections.emptyList();
         }
-        System.out.println("Retrieved from Redis: " + key + " -> " + json);
         try {
             return objectMapper.readValue(json, objectMapper
                     .getTypeFactory()
                     .constructCollectionType(List.class, clazz));
         } catch (JsonProcessingException e) {
-            System.out.println("Error deserializing value from Redis: " + e);
             return Collections.emptyList();
         }
     }
