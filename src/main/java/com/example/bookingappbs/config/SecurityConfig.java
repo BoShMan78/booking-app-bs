@@ -46,10 +46,11 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(
                         auth -> auth.requestMatchers("/register",
-                                "/login",
-                                "/error",
-                                "/swagger-ui/**",
-                                "/v3/api-docs/**")
+                                        "/login",
+                                        "/error",
+                                        "/swagger-ui/**",
+                                        "/v3/api-docs/**",
+                                        "/actuator/health")
                                 .permitAll()
                                 .requestMatchers(HttpMethod.GET, "/accommodations").permitAll()
                                 .requestMatchers(HttpMethod.GET, "/accommodations/{id}").permitAll()
