@@ -25,6 +25,7 @@ import com.example.bookingappbs.model.Booking;
 import com.example.bookingappbs.model.Booking.Status;
 import com.example.bookingappbs.model.User;
 import com.example.bookingappbs.model.User.Role;
+import com.example.bookingappbs.service.accommodation.AccommodationService;
 import com.example.bookingappbs.service.booking.BookingService;
 import com.example.bookingappbs.service.notification.TelegramService;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -78,6 +79,8 @@ public class BookingControllerTest {
     private TelegramService telegramService;
     @MockBean
     private BookingService bookingService;
+    @MockBean
+    private AccommodationService accommodationService;
     @Autowired
     private UserMapper userMapper;
 

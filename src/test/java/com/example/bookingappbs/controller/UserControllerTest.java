@@ -12,6 +12,8 @@ import com.example.bookingappbs.dto.user.UpdateUserRoleRequestDto;
 import com.example.bookingappbs.dto.user.UserResponseDto;
 import com.example.bookingappbs.model.User;
 import com.example.bookingappbs.model.User.Role;
+import com.example.bookingappbs.service.accommodation.AccommodationService;
+import com.example.bookingappbs.service.booking.BookingService;
 import com.example.bookingappbs.service.notification.TelegramService;
 import com.example.bookingappbs.service.user.UserService;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -51,6 +53,10 @@ public class UserControllerTest {
     private TelegramBotsApi telegramBotsApi;
     @MockBean
     private TelegramService telegramService;
+    @MockBean
+    private BookingService bookingService;
+    @MockBean
+    private AccommodationService accommodationService;
 
     @Autowired
     private UserService userService;

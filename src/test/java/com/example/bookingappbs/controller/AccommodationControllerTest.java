@@ -1,5 +1,7 @@
 package com.example.bookingappbs.controller;
 
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.BDDMockito.willDoNothing;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -17,7 +19,9 @@ import com.example.bookingappbs.dto.address.AddressDto;
 import com.example.bookingappbs.model.Accommodation;
 import com.example.bookingappbs.model.Accommodation.Type;
 import com.example.bookingappbs.model.Address;
+import com.example.bookingappbs.service.RedisService;
 import com.example.bookingappbs.service.accommodation.AccommodationService;
+import com.example.bookingappbs.service.booking.BookingService;
 import com.example.bookingappbs.service.notification.TelegramService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.Filter;
@@ -34,11 +38,13 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.boot.test.mock.mockito.SpyBean;
 import org.springframework.core.io.ClassPathResource;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.datasource.init.ScriptUtils;
 import org.springframework.security.test.context.support.WithMockUser;
@@ -67,6 +73,12 @@ public class AccommodationControllerTest {
     private TelegramService telegramService;
     @SpyBean
     private AccommodationService accommodationService;
+    @MockBean
+    private BookingService bookingService;
+    @MockBean
+    private RedisService redisService;
+    @MockBean
+    private RedisTemplate<String, Object> redisTemplate;
 
     private Address address;
     private AddressDto addressDto;
@@ -158,6 +170,14 @@ public class AccommodationControllerTest {
         String jsonRequest = objectMapper.writeValueAsString(createRequestDto);
 
         //When
+        Mockito.doReturn(expected)
+                .when(accommodationService).save(any(CreateAccommodationRequestDto.class));
+
+        Mockito.doNothing()
+                .when(redisService).deletePattern(anyString());
+
+        Mockito.doNothing()
+                .when(redisService).save(anyString(), any());
         MvcResult result = mockMvc.perform(
                         post("/accommodations")
                                 .content(jsonRequest)

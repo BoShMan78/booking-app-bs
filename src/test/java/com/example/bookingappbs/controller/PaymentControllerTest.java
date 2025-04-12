@@ -14,6 +14,8 @@ import com.example.bookingappbs.dto.payment.PaymentDto;
 import com.example.bookingappbs.model.Payment.Status;
 import com.example.bookingappbs.model.User;
 import com.example.bookingappbs.model.User.Role;
+import com.example.bookingappbs.service.accommodation.AccommodationService;
+import com.example.bookingappbs.service.booking.BookingService;
 import com.example.bookingappbs.service.payment.PaymentProcessingService;
 import java.math.BigDecimal;
 import java.util.List;
@@ -43,6 +45,10 @@ import org.springframework.web.context.WebApplicationContext;
 public class PaymentControllerTest {
     @MockBean
     private PaymentProcessingService paymentProcessingService;
+    @MockBean
+    private BookingService bookingService;
+    @MockBean
+    private AccommodationService accommodationService;
     @Autowired
     private MockMvc mockMvc;
     @Autowired
