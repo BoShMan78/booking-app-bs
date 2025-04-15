@@ -8,6 +8,7 @@ import java.util.Set;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class RedisService {
@@ -16,6 +17,7 @@ public class RedisService {
     @Autowired
     private ObjectMapper objectMapper;
 
+    @Transactional
     public <T> void save(String key, T value) {
         try {
             String json = objectMapper.writeValueAsString(value);
@@ -51,6 +53,7 @@ public class RedisService {
         }
     }
 
+    @Transactional
     public void delete(String key) {
         redisTemplate.delete(key);
     }

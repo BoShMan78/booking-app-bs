@@ -15,6 +15,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
@@ -26,6 +27,7 @@ public class AccommodationServiceImpl implements AccommodationService {
     private final RedisTemplate<String, Object> redisTemplate;
 
     @Override
+    @Transactional
     public AccommodationDto save(CreateAccommodationRequestDto requestDto) {
         Accommodation accommodation = accommodationMapper.toModel(requestDto);
         Accommodation savedAccommodation = accommodationRepository.save(accommodation);
@@ -83,6 +85,7 @@ public class AccommodationServiceImpl implements AccommodationService {
     }
 
     @Override
+    @Transactional
     public AccommodationDto updateAccommodationById(
             Long id, UpdateAccommodationRequestDto requestDto
     ) {
@@ -109,6 +112,7 @@ public class AccommodationServiceImpl implements AccommodationService {
     }
 
     @Override
+    @Transactional
     public void deleteAccommodationById(Long id) {
         redisService.deletePattern("accommodations::all::*");
         redisService.delete("accommodation::" + id);

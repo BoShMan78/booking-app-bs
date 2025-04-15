@@ -73,6 +73,7 @@ public class PaymentProcessingServiceImpl implements PaymentProcessingService {
     @Transactional
     public PaymentDto createPaymentSession(User user, Long bookingId) throws StripeException {
         BookingDto bookingDto = bookingService.getBookingById(user, bookingId);
+
         if (bookingDto == null || !bookingDto.userId().equals(user.getId())) {
             throw new EntityNotFoundException(bookingNotFoundOrNotBelongMessage + bookingId);
         }
@@ -95,6 +96,7 @@ public class PaymentProcessingServiceImpl implements PaymentProcessingService {
                 sessionId,
                 totalAmount
         );
+
         return paymentService.save(paymentRequestDto);
     }
 

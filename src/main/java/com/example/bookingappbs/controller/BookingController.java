@@ -54,11 +54,11 @@ public class BookingController {
     @GetMapping
     @Operation(
             summary = "Retrieves bookings based on user ID and their status",
-            description = "Available for managers"
+            description = "Available for managers. Allows filtering by user ID and/or status."
     )
     public List<BookingDto> getBookingsByUserIdAndStatus(
-            @RequestParam Long userId,
-            @RequestParam Status status,
+            @RequestParam(required = false) Long userId,
+            @RequestParam(required = false) Status status,
             @ParameterObject @PageableDefault Pageable pageable
     ) {
         return bookingService.getBookingsByUserAndStatus(userId, status, pageable);

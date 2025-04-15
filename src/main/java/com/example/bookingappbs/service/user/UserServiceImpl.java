@@ -13,6 +13,7 @@ import com.example.bookingappbs.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @RequiredArgsConstructor
 @Service
@@ -22,6 +23,7 @@ public class UserServiceImpl implements UserService {
     private final PasswordEncoder passwordEncoder;
 
     @Override
+    @Transactional
     public UserResponseDto register(UserRegistrationRequestDto requestDto) {
         if (userRepository.existsByEmail(requestDto.email())) {
             throw new RegistrationException(
@@ -38,6 +40,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    @Transactional
     public UserResponseDto updateUserRole(Long id, UpdateUserRoleRequestDto requestDto) {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Can't find user by id: " + id));
@@ -56,6 +59,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    @Transactional
     public UserResponseDto updateCurrentUserPatch(User currentUser,
                                                   UpdateCurrentUserRequestDto requestDto) {
         User existingUser = userRepository.findById(currentUser.getId())

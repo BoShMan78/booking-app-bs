@@ -27,9 +27,11 @@ import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
@@ -45,6 +47,7 @@ public class BookingServiceImpl implements BookingService {
     private final PaymentService paymentService;
 
     @Override
+    @Transactional
     public BookingDto save(User user, CreateBookingRequestDto requestDto) {
         long pendingPaymentsCount = paymentService.countPendingPaymentsForUser(user.getId());
         if (pendingPaymentsCount > 0) {
@@ -70,6 +73,14 @@ public class BookingServiceImpl implements BookingService {
             throw new IllegalArgumentException("Accommodation with id "
                     + accommodation.getId() + " is already booked for the selected dates");
         }
+
+        if (accommodation.getAvailability() <= 0) {
+            throw new IllegalArgumentException("Accommodation with id: " + accommodation.getId()
+                    + " is currently unavailable.");
+        }
+
+        accommodation.setAvailability(accommodation.getAvailability() - 1);
+        accommodationRepository.save(accommodation);
 
         Booking savedBooking = bookingRepository.save(booking);
         BookingDto bookingDto = bookingMapper.toDto(savedBooking);
@@ -100,19 +111,36 @@ public class BookingServiceImpl implements BookingService {
             Status status,
             Pageable pageable
     ) {
-        String key = "bookings::user::" + userId + "::status::" + status
-                + "::page::" + pageable.getPageNumber()
-                + "::size::" + pageable.getPageSize()
-                + "::sort::" + pageable.getSort();
+        String cacheKeyPrefix = "bookings";
+        StringBuilder cacheKeyBuilder = new StringBuilder(cacheKeyPrefix);
+
+        Specification<Booking> specification = Specification.where(null);
+
+        if (userId != null) {
+            specification = specification.and((root, query, criteriaBuilder) ->
+                    criteriaBuilder.equal(root.get("user").get("id"), userId));
+            cacheKeyBuilder.append("::user::").append(userId);
+        }
+
+        if (status != null) {
+            specification = specification.and((root, query, criteriaBuilder) ->
+                    criteriaBuilder.equal(root.get("status"), status));
+            cacheKeyBuilder.append("::status::").append(status);
+        }
+
+        cacheKeyBuilder.append("::page::").append(pageable.getPageNumber())
+                .append("::size::").append(pageable.getPageSize())
+                .append("::sort::").append(pageable.getSort());
+
+        String key = cacheKeyBuilder.toString();
         List<BookingDto> cachedBookings = redisService.findAll(key, BookingDto.class);
-        if (cachedBookings != null && cachedBookings.size() > 0) {
+        if (cachedBookings != null && !cachedBookings.isEmpty()) {
             return cachedBookings;
         }
 
-        Page<Booking> byUserIdAndStatus = bookingRepository
-                .findByUserIdAndStatus(userId, status, pageable);
+        Page<Booking> bookings = bookingRepository.findAll(specification, pageable);
 
-        List<BookingDto> bookingDtos = byUserIdAndStatus.stream()
+        List<BookingDto> bookingDtos = bookings.stream()
                 .map(bookingMapper::toDto)
                 .collect(Collectors.toList());
 
@@ -159,6 +187,7 @@ public class BookingServiceImpl implements BookingService {
     }
 
     @Override
+    @Transactional
     public BookingDto updateBookingById(User user, Long id, UpdateBookingRequestDto requestDto) {
         Booking existedBooking = bookingRepository.findById(id)
                 .orElseThrow(() ->
@@ -227,6 +256,7 @@ public class BookingServiceImpl implements BookingService {
     }
 
     @Override
+    @Transactional
     public void deleteBookingById(User user, Long id) {
         Booking booking = bookingRepository.findById(id)
                         .orElseThrow(() -> new EntityNotFoundException(
@@ -239,11 +269,14 @@ public class BookingServiceImpl implements BookingService {
         booking.setStatus(Status.CANCELED);
         bookingRepository.save(booking);
 
+        Accommodation accommodation = booking.getAccommodation();
+        accommodation.setAvailability(accommodation.getAvailability() + 1);
+        accommodationRepository.save(accommodation);
+
         redisService.deletePattern("bookings::all::*");
         redisService.deletePattern("bookings::user::*");
         redisService.delete("booking::" + id);
 
-        Accommodation accommodation = booking.getAccommodation();
         notificationService.sendNotification(
                 "Booking canceled:  \n"
                         + "Booking ID: " + booking.getId() + "\n"
@@ -264,6 +297,7 @@ public class BookingServiceImpl implements BookingService {
     }
 
     @Override
+    @Transactional
     @Scheduled(cron = "0 0 0 * * *")
     public void checkAndExpiredBooking() {
         LocalDate yesterday = LocalDate.now().minusDays(1);
@@ -274,9 +308,12 @@ public class BookingServiceImpl implements BookingService {
             notificationService.sendNotification("No expired bookings today!");
         } else {
             for (Booking booking : expiredBookings) {
+                Accommodation accommodation = booking.getAccommodation();
+                accommodation.setAvailability(accommodation.getAvailability() + 1);
+                accommodationRepository.save(accommodation);
+
                 booking.setStatus(Status.EXPIRED);
                 bookingRepository.save(booking);
-                Accommodation accommodation = booking.getAccommodation();
                 notificationService.sendNotification(
                         "Booking expired and accommodation released:\n"
                                 + "Booking ID: " + booking.getId() + "\n"

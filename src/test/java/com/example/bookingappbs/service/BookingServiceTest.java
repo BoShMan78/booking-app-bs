@@ -48,6 +48,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.security.test.context.support.WithMockUser;
 
 @ExtendWith(MockitoExtension.class)
@@ -100,7 +101,8 @@ public class BookingServiceTest {
         accommodation = new Accommodation().setId(accommodationId)
                 .setType(Type.APARTMENT)
                 .setLocation(address)
-                .setDailyRate(BigDecimal.valueOf(75.50));
+                .setDailyRate(BigDecimal.valueOf(75.50))
+                .setAvailability(1);
 
         createBookingRequestDto = new CreateBookingRequestDto(
                 LocalDate.of(2027, 01, 15),
@@ -163,6 +165,7 @@ public class BookingServiceTest {
                         eq(booking.getCheckInDate())
                 )).thenReturn(false);
 
+        when(accommodationRepository.save(any(Accommodation.class))).thenReturn(accommodation);
         Mockito.when(bookingRepository.save(any(Booking.class))).thenReturn(booking);
         when(bookingMapper.toDto(booking)).thenReturn(bookingDto);
 
@@ -174,6 +177,7 @@ public class BookingServiceTest {
         verify(paymentService, times(1)).countPendingPaymentsForUser(userId);
         verify(bookingMapper, times(1)).toModel(createBookingRequestDto);
         verify(accommodationRepository, times(1)).findById(accommodationId);
+        verify(accommodationRepository, times(1)).save(any(Accommodation.class));
         verify(bookingRepository, times(1))
                 .existsByAccommodationAndCheckInDateLessThanAndCheckOutDateGreaterThan(
                         eq(accommodation),
@@ -219,7 +223,7 @@ public class BookingServiceTest {
                 + "::sort::" + pageable.getSort();
         when(redisService.findAll(key, BookingDto.class)).thenReturn(null);
         Page<Booking> bookingPage = new PageImpl<>(List.of(new Booking().setId(bookingId)));
-        when(bookingRepository.findByUserIdAndStatus(userId, status, pageable))
+        when(bookingRepository.findAll(any(Specification.class), eq(pageable)))
                 .thenReturn(bookingPage);
         List<BookingDto> bookingDtos = List.of(new BookingDto(
                 bookingId,
@@ -238,7 +242,7 @@ public class BookingServiceTest {
         // Then
         assertThat(result).isEqualTo(bookingDtos);
         verify(redisService, times(1)).findAll(key, BookingDto.class);
-        verify(bookingRepository, times(1)).findByUserIdAndStatus(userId, status, pageable);
+        verify(bookingRepository, times(1)).findAll(any(Specification.class), eq(pageable));
         verify(bookingMapper, times(1)).toDto(any(Booking.class));
         verify(redisService, times(1)).save(key, bookingDtos);
         verifyNoMoreInteractions(bookingRepository, bookingMapper, redisService);
