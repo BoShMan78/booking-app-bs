@@ -1,0 +1,209 @@
+{
+	"info": {
+		"_postman_id": "89ee816d-74c8-4a36-ab39-b792522fcfd9",
+		"name": "Accommodation Controller",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "34047080"
+	},
+	"item": [
+		{
+			"name": "Create a new accommodation",
+			"request": {
+				"auth": {
+					"type": "bearer",
+					"bearer": [
+						{
+							"key": "token",
+							"value": "eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiJhZG1pbkBleGFtcGxlLmNvbSIsImlhdCI6MTc0MTg3Mzk3MSwiZXhwIjoxNzQxODc2OTcxfQ.YfGYcdm2bSL_jWb17iAmlod1QTKYFDFJldcaPxnoGSQsJUveBDLUiLp3-4NT7gCv",
+							"type": "string"
+						}
+					]
+				},
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n    \"type\":\"HOUSE\",\r\n    \"location\":{\r\n        \"country\":\"Ukraine\",\r\n        \"city\":\"Odesa\",\r\n        \"street\":\"Pushkinskaya str.\",\r\n        \"house\":\"1a\"\r\n    },\r\n    \"size\":\"1 bedroom\",\r\n    \"amenities\":[\"parking\", \"wi-fi\"],\r\n    \"dailyRate\":50.50,\r\n    \"availability\":1\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://localhost:8080/accommodations",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"accommodations"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Get all accommodations",
+			"protocolProfileBehavior": {
+				"disableBodyPruning": true
+			},
+			"request": {
+				"auth": {
+					"type": "bearer",
+					"bearer": [
+						{
+							"key": "token",
+							"value": "eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiJhZG1pbkBleGFtcGxlLmNvbSIsImlhdCI6MTc0MTg3Mzk3MSwiZXhwIjoxNzQxODc2OTcxfQ.YfGYcdm2bSL_jWb17iAmlod1QTKYFDFJldcaPxnoGSQsJUveBDLUiLp3-4NT7gCv",
+							"type": "string"
+						}
+					]
+				},
+				"method": "GET",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://localhost:8080/accommodations",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"accommodations"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Get accommodation by ID",
+			"protocolProfileBehavior": {
+				"disableBodyPruning": true
+			},
+			"request": {
+				"auth": {
+					"type": "bearer",
+					"bearer": [
+						{
+							"key": "token",
+							"value": "eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiJhZG1pbkBleGFtcGxlLmNvbSIsImlhdCI6MTc0MTk0MzEyOSwiZXhwIjoxNzQxOTQ2MTI5fQ.F9rdz3QOaXdYXvcTIIjcsiWosxOy6-AZM3QyLgefJbJXelkn2KQBkhBbexVGyzsl",
+							"type": "string"
+						}
+					]
+				},
+				"method": "GET",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://localhost:8080/accommodations/1",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"accommodations",
+						"1"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Update accommodation by ID",
+			"request": {
+				"auth": {
+					"type": "bearer",
+					"bearer": [
+						{
+							"key": "token",
+							"value": "eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiJhZG1pbkBleGFtcGxlLmNvbSIsImlhdCI6MTc0MTk0MzEyOSwiZXhwIjoxNzQxOTQ2MTI5fQ.F9rdz3QOaXdYXvcTIIjcsiWosxOy6-AZM3QyLgefJbJXelkn2KQBkhBbexVGyzsl",
+							"type": "string"
+						}
+					]
+				},
+				"method": "PATCH",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n    \"type\":\"APARTMENT\",\r\n    \"size\":\"3 bedroom\",\r\n    \"amenities\":[\"parking\", \"wi-fi\"],\r\n    \"dailyRate\":60\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://localhost:8080/accommodations/1",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"accommodations",
+						"1"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Delete accommodation by ID",
+			"request": {
+				"auth": {
+					"type": "bearer",
+					"bearer": [
+						{
+							"key": "token",
+							"value": "eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiJhZG1pbkBleGFtcGxlLmNvbSIsImlhdCI6MTc0MTk0MzQwNiwiZXhwIjoxNzQxOTQ2NDA2fQ.lj84Vh3ottpG48Z3Du3D-FCaJartUfN1GJovJGCCOkdJAsj00KOif8v1HQS9KlJ7",
+							"type": "string"
+						}
+					]
+				},
+				"method": "DELETE",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://localhost:8080/accommodations/2",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"accommodations",
+						"2"
+					]
+				}
+			},
+			"response": []
+		}
+	]
+}
