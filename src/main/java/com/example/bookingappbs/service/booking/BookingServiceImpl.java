@@ -54,39 +54,31 @@ public class BookingServiceImpl implements BookingService {
             throw new PendingPaymentException("There are already pending payments for the user");
         }
 
+        Accommodation accommodation = accommodationRepository
+                .findById(requestDto.accommodationId())
+                .orElseThrow(() -> new EntityNotFoundException("Cannot find accommodation by id: "
+                        + requestDto.accommodationId()));
+
+        int overlappingBookings = bookingRepository.countOverLappingBookings(
+                accommodation,
+                requestDto.checkInDate(),
+                requestDto.checkOutDate(),
+                List.of(Status.CANCELED, Status.EXPIRED));
+
+        if (overlappingBookings >= accommodation.getAvailability()) {
+            throw new IllegalArgumentException("No available units for the selected dates. "
+                    + "Max capacity: " + accommodation.getAvailability());
+        }
+
         Booking booking = bookingMapper.toModel(requestDto);
         booking.setStatus(Status.PENDING);
         booking.setUser(user);
-
-        Accommodation accommodation = accommodationRepository
-                .findById(booking.getAccommodation().getId())
-                .orElseThrow(() -> new EntityNotFoundException("Cannot find accommodation by id: "
-                        + booking.getAccommodation().getId()));
         booking.setAccommodation(accommodation);
-
-        boolean isAccommodationBooked = bookingRepository
-                .existsByAccommodationAndCheckInDateLessThanAndCheckOutDateGreaterThan(
-                        accommodation, booking.getCheckOutDate(), booking.getCheckInDate()
-                );
-
-        if (isAccommodationBooked) {
-            throw new IllegalArgumentException("Accommodation with id "
-                    + accommodation.getId() + " is already booked for the selected dates");
-        }
-
-        if (accommodation.getAvailability() <= 0) {
-            throw new IllegalArgumentException("Accommodation with id: " + accommodation.getId()
-                    + " is currently unavailable.");
-        }
-
-        accommodation.setAvailability(accommodation.getAvailability() - 1);
-        accommodationRepository.save(accommodation);
 
         Booking savedBooking = bookingRepository.save(booking);
         BookingDto bookingDto = bookingMapper.toDto(savedBooking);
 
-        redisService.deletePattern("bookings::all::*");
-        redisService.deletePattern("bookings::user::*");
+        redisService.deletePattern("bookings*");
         redisService.save("booking::" + savedBooking.getId(), bookingDto);
 
         notificationService.sendNotification(
@@ -215,41 +207,39 @@ public class BookingServiceImpl implements BookingService {
             }
         }
 
+        LocalDate newCheckInDate = existedBooking.getCheckInDate();
+        LocalDate newCheckOutDate = existedBooking.getCheckOutDate();
+
+        if (requestDto.checkInDate() != null) {
+            newCheckInDate = requestDto.checkInDate();
+        }
         if (requestDto.checkOutDate() != null) {
-            if (requestDto.checkInDate() != null
-                    && requestDto.checkOutDate().isBefore(requestDto.checkInDate().plusDays(1))) {
-                throw new IllegalArgumentException("Check-out date must be after check-in date");
-            } else if (requestDto.checkInDate() == null
-                    && requestDto.checkOutDate()
-                    .isBefore(existedBooking.getCheckInDate()
-                    .plusDays(1))) {
-                throw new IllegalArgumentException("Check-out date must be after check-in date");
-            }
-            existedBooking.setCheckOutDate(requestDto.checkOutDate());
+            newCheckOutDate = requestDto.checkOutDate();
         }
 
-        if (requestDto.checkInDate() != null || requestDto.checkOutDate() != null) {
-            Accommodation accommodation = existedBooking.getAccommodation();
-            LocalDate newCheckInDate = requestDto.checkInDate() != null
-                    ? requestDto.checkInDate() : existedBooking.getCheckInDate();
-            LocalDate newCheckOutDate = requestDto.checkOutDate() != null
-                    ? requestDto.checkOutDate() : existedBooking.getCheckOutDate();
-            boolean isAccommodationBooked = bookingRepository
-                    .existsByAccommodationAndCheckInDateLessThanAndCheckOutDateGreaterThanAndIdNot(
-                            accommodation, newCheckOutDate, newCheckInDate, id
-                    );
-
-            if (isAccommodationBooked) {
-                throw new IllegalArgumentException("Accommodation with id "
-                        + accommodation.getId() + " is already booked for the selected dates");
-            }
+        if (newCheckInDate.isAfter(newCheckOutDate.minusDays(1))) {
+            throw new IllegalArgumentException("Check-in date must be before check-out date");
         }
+
+        int overlappingBookings = bookingRepository.countOverlappingBookingsExcludingCurrent(
+                existedBooking.getAccommodation(),
+                newCheckInDate,
+                newCheckOutDate,
+                List.of(Status.CANCELED, Status.EXPIRED),
+                existedBooking.getId()
+        );
+
+        if (overlappingBookings >= existedBooking.getAccommodation().getAvailability()) {
+            throw new IllegalArgumentException("No available units for the new dates");
+        }
+
+        existedBooking.setCheckInDate(newCheckInDate);
+        existedBooking.setCheckOutDate(newCheckOutDate);
 
         Booking savedBooking = bookingRepository.save(existedBooking);
         BookingDto bookingDto = bookingMapper.toDto(savedBooking);
 
-        redisService.deletePattern("bookings::all::*");
-        redisService.deletePattern("bookings::user::*");
+        redisService.deletePattern("bookings*");
         redisService.save("booking::" + id, bookingDto);
 
         return bookingDto;
@@ -265,17 +255,17 @@ public class BookingServiceImpl implements BookingService {
         if (booking.getStatus() == Status.CANCELED) {
             throw new IllegalArgumentException("Booking with id " + id + " is already canceled");
         }
+        if (booking.isDeleted()) {
+            throw new IllegalArgumentException("Booking with id " + id + " is already deleted");
+        }
 
         booking.setStatus(Status.CANCELED);
         bookingRepository.save(booking);
+        bookingRepository.delete(booking);
+
+        redisService.deletePattern("bookings*");
 
         Accommodation accommodation = booking.getAccommodation();
-        accommodation.setAvailability(accommodation.getAvailability() + 1);
-        accommodationRepository.save(accommodation);
-
-        redisService.deletePattern("bookings::all::*");
-        redisService.deletePattern("bookings::user::*");
-        redisService.delete("booking::" + id);
 
         notificationService.sendNotification(
                 "Booking canceled:  \n"
@@ -309,8 +299,6 @@ public class BookingServiceImpl implements BookingService {
         } else {
             for (Booking booking : expiredBookings) {
                 Accommodation accommodation = booking.getAccommodation();
-                accommodation.setAvailability(accommodation.getAvailability() + 1);
-                accommodationRepository.save(accommodation);
 
                 booking.setStatus(Status.EXPIRED);
                 bookingRepository.save(booking);
@@ -326,8 +314,10 @@ public class BookingServiceImpl implements BookingService {
                                 + "Check-in Date: " + booking.getCheckInDate() + "\n"
                                 + "Check-out Date: " + booking.getCheckOutDate()
                 );
+                redisService.delete("booking::" + booking.getId());
             }
         }
+        redisService.deletePattern("bookings*");
     }
 
     @Override

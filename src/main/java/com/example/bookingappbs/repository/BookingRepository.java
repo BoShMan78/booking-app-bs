@@ -10,6 +10,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 public interface BookingRepository extends JpaRepository<Booking, Long> {
     Page<Booking> findByUserIdAndStatus(Long userId, Status status, Pageable pageable);
@@ -18,21 +20,38 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
 
     boolean existsBookingByIdAndUser(Long id, User user);
 
-    boolean existsByAccommodationAndCheckInDateLessThanAndCheckOutDateGreaterThan(
-            Accommodation accommodation,
-            LocalDate checkOutDate,
-            LocalDate checkInDate
-    );
-
-    boolean existsByAccommodationAndCheckInDateLessThanAndCheckOutDateGreaterThanAndIdNot(
-            Accommodation accommodation,
-            LocalDate checkOutDate,
-            LocalDate checkInDate,
-            Long id
-    );
-
     List<Booking> findByStatusIsNotAndCheckOutDateLessThanEqual(
             Status status, LocalDate checkOutDate);
 
     Page<Booking> findAll(Specification<Booking> specification, Pageable pageable);
+
+    @Query("""
+            SELECT COUNT(b) FROM Booking b
+            WHERE b.accommodation = :accommodation
+            AND b.status NOT IN :excludedStatuses
+            AND b.checkInDate < :checkOutDate
+            AND b.checkOutDate > :checkInDate
+            """)
+    int countOverLappingBookings(
+            @Param("accommodation") Accommodation accommodation,
+            @Param("checkInDate") LocalDate checkInDate,
+            @Param("checkOutDate") LocalDate checkOutDate,
+            @Param("excludedStatuses") List<Status> exludedStatuses
+    );
+
+    @Query("""
+                SELECT COUNT(b) FROM Booking b
+                WHERE b.accommodation = :accommodation
+                AND b.status NOT IN :excludedStatuses
+                AND b.id != :excludedBookingId
+                AND b.checkInDate < :checkOutDate
+                AND b.checkOutDate > :checkInDate
+            """)
+    int countOverlappingBookingsExcludingCurrent(
+            @Param("accommodation") Accommodation accommodation,
+            @Param("checkInDate") LocalDate checkInDate,
+            @Param("checkOutDate") LocalDate checkOutDate,
+            @Param("excludedStatuses") List<Status> excludedStatuses,
+            @Param("excludedBookingId") Long excludedBookingId
+    );
 }

@@ -235,6 +235,14 @@ Here's a brief overview of key API endpoints:
 * **`GET /payments/success/`**: Handles the redirection from Stripe upon successful payment. Verifies the payment status and updates the booking and payment records in the system accordingly.
 * **`GET /payments/cancel/`**: Manages the redirection from Stripe if the payment is canceled by the user. Typically informs the user that the payment can be attempted later.
 
+## Video Demonstration
+
+For a quick overview of the application's functionality, please watch the following video demonstration:
+
+[Short Demonstration Video](https://vimeo.com/manage/videos/1076702684)
+
+This video provides a brief walkthrough of the key features and demonstrates how to use the application.
+
 ## 🏗️ Component/Entity Diagram
 ```mermaid
 erDiagram

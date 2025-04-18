@@ -42,7 +42,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -158,15 +157,8 @@ public class BookingServiceTest {
         when(bookingMapper.toModel(createBookingRequestDto)).thenReturn(booking);
         when(accommodationRepository.findById(accommodationId))
                 .thenReturn(Optional.of(accommodation));
-        when(bookingRepository
-                .existsByAccommodationAndCheckInDateLessThanAndCheckOutDateGreaterThan(
-                        eq(accommodation),
-                        eq(booking.getCheckOutDate()),
-                        eq(booking.getCheckInDate())
-                )).thenReturn(false);
-
-        when(accommodationRepository.save(any(Accommodation.class))).thenReturn(accommodation);
-        Mockito.when(bookingRepository.save(any(Booking.class))).thenReturn(booking);
+        when(bookingRepository.countOverLappingBookings(any(), any(), any(), any())).thenReturn(0);
+        when(bookingRepository.save(any(Booking.class))).thenReturn(booking);
         when(bookingMapper.toDto(booking)).thenReturn(bookingDto);
 
         //When
@@ -177,23 +169,15 @@ public class BookingServiceTest {
         verify(paymentService, times(1)).countPendingPaymentsForUser(userId);
         verify(bookingMapper, times(1)).toModel(createBookingRequestDto);
         verify(accommodationRepository, times(1)).findById(accommodationId);
-        verify(accommodationRepository, times(1)).save(any(Accommodation.class));
-        verify(bookingRepository, times(1))
-                .existsByAccommodationAndCheckInDateLessThanAndCheckOutDateGreaterThan(
-                        eq(accommodation),
-                        eq(booking.getCheckOutDate()),
-                        eq(booking.getCheckInDate())
-                );
         verify(bookingRepository, times(1)).save(any(Booking.class));
         verify(bookingMapper, times(1)).toDto(booking);
-        verify(redisService, times(1)).deletePattern("bookings::all::*");
-        verify(redisService, times(1)).deletePattern("bookings::user::*");
+        verify(redisService, times(1)).deletePattern("bookings*");
         verify(redisService, times(1))
                 .save(eq("booking::" + booking.getId()), eq(bookingDto));
         verify(notificationService, times(1)).sendNotification(anyString());
 
         verifyNoMoreInteractions(bookingRepository, bookingMapper, paymentService, redisService,
-                accommodationRepository, notificationService);
+                notificationService);
     }
 
     @Test
@@ -289,6 +273,9 @@ public class BookingServiceTest {
     public void updateBookingById_AdminUpdateStatus_Success() {
         // Given
         when(bookingRepository.findById(bookingId)).thenReturn(Optional.of(booking));
+        when(bookingRepository
+                .countOverlappingBookingsExcludingCurrent(any(), any(), any(), any(), any()))
+                .thenReturn(0);
         when(bookingRepository.save(any(Booking.class))).thenReturn(booking);
         when(bookingMapper.toDto(booking)).thenReturn(bookingDto);
 
@@ -300,13 +287,14 @@ public class BookingServiceTest {
         assertThat(result).isEqualTo(bookingDto);
         assertThat(booking.getStatus()).isEqualTo(Status.CONFIRMED);
         verify(bookingRepository, times(1)).findById(bookingId);
+        verify(bookingRepository, times(1))
+                .countOverlappingBookingsExcludingCurrent(any(), any(), any(), any(), any());
         verify(bookingRepository, times(1)).save(booking);
         verify(bookingMapper, times(1)).toDto(booking);
-        verify(redisService, times(1)).deletePattern("bookings::all::*");
-        verify(redisService, times(1)).deletePattern("bookings::user::*");
+        verify(redisService, times(1)).deletePattern("bookings*");
         verify(redisService, times(1))
                 .save(eq("booking::" + bookingId), eq(bookingDto));
-        verifyNoMoreInteractions(bookingRepository, bookingMapper, redisService);
+        verifyNoMoreInteractions(bookingMapper, redisService);
     }
 
     @Test
@@ -373,9 +361,8 @@ public class BookingServiceTest {
         assertThat(existingBookingToDelete.getStatus()).isEqualTo(Status.CANCELED);
         verify(bookingRepository, times(1)).findById(bookingId);
         verify(bookingRepository, times(1)).save(existingBookingToDelete);
-        verify(redisService, times(1)).deletePattern("bookings::all::*");
-        verify(redisService, times(1)).deletePattern("bookings::user::*");
-        verify(redisService, times(1)).delete("booking::" + bookingId);
+        verify(bookingRepository, times(1)).delete(existingBookingToDelete);
+        verify(redisService, times(1)).deletePattern("bookings*");
         verify(notificationService, times(1)).sendNotification(anyString());
         verifyNoMoreInteractions(bookingRepository, redisService, notificationService);
     }
