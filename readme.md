@@ -176,7 +176,7 @@ Example of a valid password: `StrongPass#1`
 
 Once the application is running, Swagger documentation can be accessed at:
 
-http://localhost:8080/api/swagger-ui/index.html#/
+http://localhost:8080/swagger-ui/index.html#/
 
 ## 🏎 Data Initialization
 
