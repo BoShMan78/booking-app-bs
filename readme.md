@@ -106,6 +106,7 @@ This project utilizes the following technologies and their respective versions:
     * Maven Checkstyle Plugin 3.3.0
 * **Code Style:** Checkstyle
 * **Lombok.**
+* **Log4j2.**
 
 ## 💾 Setup Instructions
 
@@ -153,7 +154,7 @@ docker-compose up --build
 For convenient application testing, ADMIN user is registered by default:
 
 * **Administrator:**
-  * Email: `admin1@example.com`
+  * Email: `admin@example.com`
   * Password: `Password#1`
   * Role: `ADMIN`
 
