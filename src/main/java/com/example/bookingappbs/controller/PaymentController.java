@@ -9,6 +9,8 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.MediaType;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -26,6 +28,8 @@ import org.springframework.web.bind.annotation.ResponseBody;
 @RequestMapping(value = "/payments")
 @RequiredArgsConstructor
 public class PaymentController {
+    private static final Logger logger = LogManager.getLogger(PaymentController.class);
+
     private final PaymentProcessingService paymentProcessingService;
 
     @PostMapping
@@ -35,7 +39,13 @@ public class PaymentController {
             @RequestParam("bookingId") Long bookingId,
             @AuthenticationPrincipal User user
     ) throws StripeException {
-        return paymentProcessingService.createPaymentSession(user, bookingId);
+        logger.info("Processing request to create payment session for booking ID: {} "
+                + "by user ID: {}", bookingId, user.getId());
+        PaymentDto paymentDto = paymentProcessingService.createPaymentSession(user, bookingId);
+
+        logger.info("Payment session created successfully for booking ID: {}, session ID: {}",
+                bookingId, paymentDto.sessionId());
+        return paymentDto;
     }
 
     @GetMapping("/my")
@@ -54,8 +64,12 @@ public class PaymentController {
             Model model,
             Pageable pageable
     ) {
+        logger.info("Processing request to get payments for current user ID: {}. Pagination: {}",
+                user.getId(), pageable);
         List<PaymentDto> paymentDtos = paymentProcessingService
                 .getPaymentsForCurrentUser(user.getId(), pageable);
+
+        logger.info("Retrieved {} payments for user ID: {}.", paymentDtos.size(), user.getId());
         model.addAttribute("payments", paymentDtos);
         return "user_payment_list";
     }
@@ -73,7 +87,10 @@ public class PaymentController {
             }
     )
     public String getAllPayments(Model model, Pageable pageable) {
+        logger.info("Processing request to get all payments. Pagination: {}", pageable);
         List<PaymentDto> paymentDtos = paymentProcessingService.getAllPayments(pageable);
+
+        logger.info("Retrieved {} payments in total.", paymentDtos.size());
         model.addAttribute("payments", paymentDtos);
         return "all_payments_list";
     }
@@ -90,7 +107,12 @@ public class PaymentController {
             }
     )
     public String success(@RequestParam("session_id") String sessionId, Model model) {
-        return paymentProcessingService.handlePaymentSuccess(sessionId, model);
+        logger.info("Handling successful payment for session ID: {}", sessionId);
+        String message = paymentProcessingService.handlePaymentSuccess(sessionId, model);
+
+        logger.info("Payment for session ID {} processed successfully, returning view: {}",
+                sessionId, message);
+        return message;
     }
 
     @GetMapping(value = "/cancel", produces = MediaType.TEXT_HTML_VALUE)
@@ -106,8 +128,11 @@ public class PaymentController {
             }
     )
     public String cancel(@RequestParam ("session_id") String sessionId, Model model) {
-        model.addAttribute("message",
-                paymentProcessingService.getPaymentCancelledMessage(sessionId));
+        logger.info("Handling payment cancellation for session ID: {}", sessionId);
+        String message = paymentProcessingService.getPaymentCancelledMessage(sessionId);
+        model.addAttribute("message", message);
+
+        logger.info("Payment for session ID {} cancelled, message: {}", sessionId, message);
         return "payment_cancel";
     }
 
@@ -127,6 +152,12 @@ public class PaymentController {
             @AuthenticationPrincipal User user,
             Model model
     ) {
-        return paymentProcessingService.renewPaymentSession(paymentId, user, model);
+        logger.info("Processing request to renew payment session with ID: {} by user ID: {}",
+                paymentId, user.getId());
+        String message = paymentProcessingService.renewPaymentSession(paymentId, user, model);
+
+        logger.info("Payment session with ID {} renewed successfully, returning view: {}",
+                paymentId, message);
+        return message;
     }
 }

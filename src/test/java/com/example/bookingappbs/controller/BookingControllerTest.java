@@ -85,6 +85,7 @@ public class BookingControllerTest {
     private UserMapper userMapper;
 
     private User mockUser;
+    private User adminUser;
     private BookingDto expectedBookingDto;
     private CreateBookingRequestDto createBookingRequestDto;
     private UpdateBookingRequestDto updateBookingRequestDto;
@@ -119,6 +120,13 @@ public class BookingControllerTest {
                 .setFirstName("John")
                 .setLastName("Smith")
                 .setRole(Role.CUSTOMER);
+
+        adminUser = new User()
+                .setId(999L)
+                .setEmail("admin@example.com")
+                .setFirstName("Admin")
+                .setLastName("User")
+                .setRole(Role.ADMIN);
 
         createBookingRequestDto = new CreateBookingRequestDto(
                 LocalDate.now(),
@@ -272,7 +280,6 @@ public class BookingControllerTest {
     }
 
     @Test
-    @WithMockUser(username = "admin", roles = {"ADMIN"})
     @DisplayName("Get booking by ID - ADMIN")
     void getBookingById_Admin_Ok() throws Exception {
         //Given
@@ -290,10 +297,9 @@ public class BookingControllerTest {
         when(bookingService.getBookingById(any(), eq(bookingId))).thenReturn(expectedBookingWithId);
 
         SecurityContextHolder.getContext().setAuthentication(
-                new UsernamePasswordAuthenticationToken("admin", "password",
+                new UsernamePasswordAuthenticationToken(adminUser, null,
                         List.of(new SimpleGrantedAuthority("ROLE_ADMIN")))
         );
-
         //Then
         mockMvc.perform(get("/bookings/{id}", bookingId)
                         .contentType(MediaType.APPLICATION_JSON))

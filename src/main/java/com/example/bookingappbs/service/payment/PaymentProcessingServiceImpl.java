@@ -18,6 +18,8 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Pageable;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -28,6 +30,8 @@ import org.springframework.ui.Model;
 @Service
 @RequiredArgsConstructor
 public class PaymentProcessingServiceImpl implements PaymentProcessingService {
+    private static final Logger logger = LogManager.getLogger(PaymentProcessingServiceImpl.class);
+
     @Value("${domain}")
     private String domain;
     @Value("${currency}")
@@ -61,17 +65,28 @@ public class PaymentProcessingServiceImpl implements PaymentProcessingService {
 
     @Override
     public List<PaymentDto> getPaymentsForCurrentUser(Long userId, Pageable pageable) {
-        return paymentService.getPaymentsForCurrentUser(userId, pageable);
+        logger.info("Processing request to get payments for user ID: {} with pagination: {}",
+                userId, pageable);
+        List<PaymentDto> payments = paymentService.getPaymentsForCurrentUser(userId, pageable);
+
+        logger.info("Retrieved {} payments for user ID: {}.", payments.size(), userId);
+        return payments;
     }
 
     @Override
     public List<PaymentDto> getAllPayments(Pageable pageable) {
-        return paymentService.getAllPayments(pageable);
+        logger.info("Processing request to get all payments with pagination: {}", pageable);
+        List<PaymentDto> allPayments = paymentService.getAllPayments(pageable);
+
+        logger.info("Retrieved {} payments in total.", allPayments.size());
+        return allPayments;
     }
 
     @Override
     @Transactional
     public PaymentDto createPaymentSession(User user, Long bookingId) throws StripeException {
+        logger.info("Processing request to create payment session for booking ID: {} "
+                + "by user ID: {}", bookingId, user.getId());
         BookingDto bookingDto = bookingService.getBookingById(user, bookingId);
 
         if (bookingDto == null || !bookingDto.userId().equals(user.getId())) {
@@ -97,12 +112,15 @@ public class PaymentProcessingServiceImpl implements PaymentProcessingService {
                 totalAmount
         );
 
-        return paymentService.save(paymentRequestDto);
+        PaymentDto savedPayment = paymentService.save(paymentRequestDto);
+        logger.info("Payment information saved for booking ID {}: {}", bookingId, savedPayment);
+        return savedPayment;
     }
 
     @Override
     @Transactional
     public String handlePaymentSuccess(String sessionId, Model model) {
+        logger.info("Handling successful payment for Stripe session ID: {}", sessionId);
         try {
             Session session = stripeService.retrieveSession(sessionId);
             if (session.getPaymentStatus().equals(Status.PAID.toString())) {
@@ -134,12 +152,20 @@ public class PaymentProcessingServiceImpl implements PaymentProcessingService {
                 );
                 notificationService.sendNotification(telegramMessage);
 
+                logger.info("Payment success notification sent for session ID: {}", sessionId);
                 return "payment_success";
             } else {
+                logger.warn("Stripe session {} payment status is PENDING.", sessionId);
                 model.addAttribute(attributeMessage, paymentPendingMessage + sessionId);
                 return "payment_pending";
             }
         } catch (StripeException e) {
+            logger.error("Error retrieving Stripe session {}: {}", sessionId, e.getMessage());
+            model.addAttribute(attributeMessage, paymentErrorMessage + e.getMessage());
+            return "payment_error";
+        } catch (EntityNotFoundException e) {
+            logger.error("Entity not found during payment success handling for session ID {}: {}",
+                    sessionId, e.getMessage());
             model.addAttribute(attributeMessage, paymentErrorMessage + e.getMessage());
             return "payment_error";
         }
@@ -147,6 +173,7 @@ public class PaymentProcessingServiceImpl implements PaymentProcessingService {
 
     @Override
     public String getPaymentCancelledMessage(String sessionId) {
+        logger.info("Returning cancellation message for Stripe session ID: {}", sessionId);
         return paymentCancelledMessage + sessionId + ". "
                 + "You can attempt the payment again later. "
                 + "Please note that the payment session is typically valid for 24 hours.";
@@ -155,6 +182,8 @@ public class PaymentProcessingServiceImpl implements PaymentProcessingService {
     @Override
     @Transactional
     public String renewPaymentSession(Long paymentId, User user, Model model) {
+        logger.info("Processing request to renew payment session with ID: {} by user ID: {}",
+                paymentId, user.getId());
         PaymentDto paymentDto = paymentService.findById(paymentId);
 
         if (paymentDto == null || !paymentDto.bookingId().equals(
@@ -163,6 +192,7 @@ public class PaymentProcessingServiceImpl implements PaymentProcessingService {
         }
 
         if (!paymentDto.status().equals(Status.EXPIRED.toString())) {
+            logger.warn("Payment with ID {} is not expired.", paymentId);
             model.addAttribute("message", paymentNotExpiredMessage);
             return "payment_info";
         }
@@ -191,6 +221,8 @@ public class PaymentProcessingServiceImpl implements PaymentProcessingService {
 
             return "redirect:" + newSessionUrl;
         } catch (StripeException e) {
+            logger.error("Error creating new payment session for payment ID {}: {}",
+                    paymentId, e.getMessage());
             model.addAttribute("message",
                     "Error creating new payment session: " + e.getMessage());
             return "payment_error";
@@ -200,7 +232,9 @@ public class PaymentProcessingServiceImpl implements PaymentProcessingService {
     @Scheduled(fixedDelay = 60000)
     @Transactional
     public void checkExpiredSessions() {
+        logger.info("Scheduled task: Checking for expired Stripe sessions.");
         List<Payment> pendingPayments = paymentService.findByStatus(Status.PENDING);
+        logger.info("Found {} pending payments to check.", pendingPayments.size());
         for (Payment payment : pendingPayments) {
             try {
                 Session session = stripeService.retrieveSession(payment.getSessionId());
@@ -213,5 +247,6 @@ public class PaymentProcessingServiceImpl implements PaymentProcessingService {
                         + payment.getId() + ": " + e.getMessage());
             }
         }
+        logger.info("Scheduled task: Finished checking for expired Stripe sessions.");
     }
 }

@@ -24,6 +24,8 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
@@ -35,6 +37,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @RequiredArgsConstructor
 public class BookingServiceImpl implements BookingService {
+    private static final Logger logger = LogManager.getLogger(BookingServiceImpl.class);
     private static final String BOOKINGS_PAGE_KEY_PREFIX = "bookings";
     private static final String BOOKING_KEY_PREFIX = "booking::";
 
@@ -51,6 +54,8 @@ public class BookingServiceImpl implements BookingService {
     @Override
     @Transactional
     public BookingDto save(User user, CreateBookingRequestDto requestDto) {
+        logger.info("Processing request to save a new booking for user ID: {} with data: {}",
+                user.getId(), requestDto);
         long pendingPaymentsCount = paymentService.countPendingPaymentsForUser(user.getId());
         if (pendingPaymentsCount > 0) {
             throw new PendingPaymentException("There are already pending payments for the user");
@@ -75,6 +80,7 @@ public class BookingServiceImpl implements BookingService {
 
         sendBookingNotification("New booking created", savedBooking, accommodation);
 
+        logger.info("Booking saved successfully with ID: {}", savedBooking.getId());
         return bookingDto;
     }
 
@@ -84,6 +90,8 @@ public class BookingServiceImpl implements BookingService {
             Status status,
             Pageable pageable
     ) {
+        logger.info("Processing request to get bookings by user ID: {}, status: {}, "
+                + "and pagination: {}", userId, status, pageable);
         StringBuilder cacheKeyBuilder = new StringBuilder(BOOKINGS_PAGE_KEY_PREFIX);
 
         Specification<Booking> specification = Specification.where(null);
@@ -107,6 +115,8 @@ public class BookingServiceImpl implements BookingService {
         String key = cacheKeyBuilder.toString();
         List<BookingDto> cachedBookings = redisService.findAll(key, BookingDto.class);
         if (cachedBookings != null && !cachedBookings.isEmpty()) {
+            logger.info("Retrieved bookings from cache with key: {}, count: {}",
+                    key, cachedBookings.size());
             return cachedBookings;
         }
 
@@ -118,17 +128,23 @@ public class BookingServiceImpl implements BookingService {
 
         redisService.save(key, bookingDtos);
 
+        logger.info("Retrieved bookings from database, count: {}, and saved to cache with key: {}",
+                bookingDtos.size(), key);
         return bookingDtos;
     }
 
     @Override
     public List<BookingDto> getBookingsByUser(User user, Pageable pageable) {
+        logger.info("Processing request to get bookings for user ID: {} with pagination: {}",
+                user.getId(), pageable);
         String key = BOOKINGS_PAGE_KEY_PREFIX + "::user::" + user.getId()
                 + "::page::" + pageable.getPageNumber()
                 + "::size::" + pageable.getPageSize()
                 + "::sort::" + pageable.getSort();
         List<BookingDto> cachedBookings = redisService.findAll(key, BookingDto.class);
         if (cachedBookings != null && !cachedBookings.isEmpty()) {
+            logger.info("Retrieved user bookings from cache with key: {}, count: {}",
+                    key, cachedBookings.size());
             return cachedBookings;
         }
 
@@ -140,20 +156,28 @@ public class BookingServiceImpl implements BookingService {
 
         redisService.save(key, bookingDtos);
 
+        logger.info("Retrieved user bookings from database, count: {}, "
+                + "and saved to cache with key: {}", bookingDtos.size(), key);
         return bookingDtos;
     }
 
     @Override
     public BookingDto getBookingById(User user, Long id) {
+        logger.info("Processing request to get booking with ID: {} for user ID: {}",
+                id, user.getId());
         String key = BOOKING_KEY_PREFIX + id;
         BookingDto bookingDto = redisService.find(key, BookingDto.class);
         if (bookingDto == null) {
+            logger.info("Booking with ID {} not found in cache. Fetching from database.", id);
             Booking existedBooking = bookingRepository.findById(id)
                     .orElseThrow(() ->
                             new EntityNotFoundException("Cannot find Booking by id: "));
             bookingDto = bookingMapper.toDto(existedBooking);
 
             redisService.save(key, bookingDto);
+            logger.info("Booking with ID {} fetched from database and saved to cache.", id);
+        } else {
+            logger.info("Booking with ID {} found in cache.", id);
         }
         return bookingDto;
     }
@@ -161,6 +185,8 @@ public class BookingServiceImpl implements BookingService {
     @Override
     @Transactional
     public BookingDto updateBookingById(User user, Long id, UpdateBookingRequestDto requestDto) {
+        logger.info("Processing request to update booking with ID: {} for user ID: {} "
+                + "with data: {}", id, user.getId(), requestDto);
         Booking existedBooking = bookingRepository.findById(id)
                 .orElseThrow(() ->
                         new EntityNotFoundException("Booking with id " + id + " not found"));
@@ -180,6 +206,7 @@ public class BookingServiceImpl implements BookingService {
                 Optional.ofNullable(requestDto.status()).ifPresent(status -> {
                     try {
                         existedBooking.setStatus(Status.valueOf(status));
+                        logger.info("Booking ID {} status updated to: {}", id, status);
                     } catch (IllegalArgumentException e) {
                         throw new IllegalArgumentException("Invalid status " + status);
                     }
@@ -203,12 +230,15 @@ public class BookingServiceImpl implements BookingService {
 
         cacheBooking(id, bookingDto);
 
+        logger.info("Booking with ID {} updated successfully.", id);
         return bookingDto;
     }
 
     @Override
     @Transactional
     public void deleteBookingById(User user, Long id) {
+        logger.info("Processing request to delete booking with ID: {} for user ID: {}",
+                id, user.getId());
         Booking booking = bookingRepository.findById(id)
                         .orElseThrow(() -> new EntityNotFoundException(
                                 "Booking with id " + id + " not found")
@@ -225,6 +255,7 @@ public class BookingServiceImpl implements BookingService {
         redisService.deletePattern(BOOKINGS_PAGE_KEY_PREFIX + "*");
 
         sendBookingNotification("Booking canceled", booking, booking.getAccommodation());
+        logger.info("Booking with ID {} successfully canceled.", id);
     }
 
     @Override
@@ -236,13 +267,16 @@ public class BookingServiceImpl implements BookingService {
     @Transactional
     @Scheduled(cron = "0 0 0 * * *")
     public void checkAndExpiredBooking() {
+        logger.info("Scheduled task: Checking for expired bookings.");
         LocalDate yesterday = LocalDate.now().minusDays(1);
         List<Booking> expiredBookings = bookingRepository
                 .findByStatusIsNotAndCheckOutDateLessThanEqual(Status.CANCELED, yesterday);
 
         if (expiredBookings.isEmpty()) {
+            logger.info("No expired bookings found today.");
             notificationService.sendNotification("No expired bookings today!");
         } else {
+            logger.info("Found {} expired bookings.", expiredBookings.size());
             for (Booking booking : expiredBookings) {
                 booking.setStatus(Status.EXPIRED);
                 bookingRepository.save(booking);
@@ -254,16 +288,21 @@ public class BookingServiceImpl implements BookingService {
                 );
 
                 redisService.delete(BOOKING_KEY_PREFIX + booking.getId());
+                logger.info("Booking ID {} expired and processed.", booking.getId());
             }
         }
         redisService.deletePattern(BOOKINGS_PAGE_KEY_PREFIX + "*");
+        logger.info("Scheduled task: Finished checking for expired bookings.");
     }
 
     @Override
     public AccommodationDto findAccommodationById(Long accommodationId) {
+        logger.info("Processing request to find accommodation by ID: {}", accommodationId);
         Accommodation accommodation = accommodationRepository.findById(accommodationId)
                 .orElseThrow(() -> new EntityNotFoundException("Cannot find accommodation with id "
                         + accommodationId));
+
+        logger.info("Accommodation with ID {} found.", accommodationId);
         return accommodationMapper.toDto(accommodation);
     }
 

@@ -12,6 +12,8 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.Positive;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
@@ -35,6 +37,8 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 @RequestMapping(value = "/bookings")
 public class BookingController {
+    private static final Logger logger = LogManager.getLogger(BookingController.class);
+
     private final BookingService bookingService;
 
     @PostMapping
@@ -47,7 +51,12 @@ public class BookingController {
             @AuthenticationPrincipal User user,
             @RequestBody @Valid CreateBookingRequestDto requestDto
     ) {
-        return bookingService.save(user, requestDto);
+        logger.info("Processing request to create a new booking for user ID: {}. Request: {}",
+                user.getId(), requestDto);
+        BookingDto savedBooking = bookingService.save(user, requestDto);
+
+        logger.info("Booking successfully created with ID: {}", savedBooking.id());
+        return savedBooking;
     }
 
     @PreAuthorize("hasRole('ADMIN')")
@@ -61,7 +70,13 @@ public class BookingController {
             @RequestParam(required = false) Status status,
             @ParameterObject @PageableDefault Pageable pageable
     ) {
-        return bookingService.getBookingsByUserAndStatus(userId, status, pageable);
+        logger.info("Received request to get bookings by user ID: {} and status: {}. "
+                + "Pagination: {}", userId, status, pageable);
+        List<BookingDto> bookings = bookingService
+                .getBookingsByUserAndStatus(userId, status, pageable);
+
+        logger.info("Retrieved {} bookings.", bookings.size());
+        return bookings;
     }
 
     @GetMapping("/my")
@@ -73,7 +88,12 @@ public class BookingController {
             @AuthenticationPrincipal User user,
             @ParameterObject @PageableDefault Pageable pageable
     ) {
-        return bookingService.getBookingsByUser(user, pageable);
+        logger.info("Received request to get bookings for current user ID: {}. Pagination: {}",
+                user.getId(), pageable);
+        List<BookingDto> userBookings = bookingService.getBookingsByUser(user, pageable);
+
+        logger.info("Retrieved {} bookings for user ID: {}.", userBookings.size(), user.getId());
+        return userBookings;
     }
 
     @GetMapping("/{id}")
@@ -86,7 +106,12 @@ public class BookingController {
             @AuthenticationPrincipal User user,
             @PathVariable @Positive Long id
     ) {
-        return bookingService.getBookingById(user, id);
+        logger.info("Received request to get booking with ID: {} by user ID: {}.",
+                id, user.getId());
+        BookingDto bookingDto = bookingService.getBookingById(user, id);
+
+        logger.info("Booking information with ID {} successfully retrieved.", id);
+        return bookingDto;
     }
 
     @PatchMapping("/{id}")
@@ -101,7 +126,12 @@ public class BookingController {
             @PathVariable @Positive Long id,
             @RequestBody UpdateBookingRequestDto requestDto
     ) {
-        return bookingService.updateBookingById(user, id, requestDto);
+        logger.info("Received request to update booking with ID: {} by user ID: {}. "
+                + "Update data: {}", id, user.getId(), requestDto);
+        BookingDto bookingDto = bookingService.updateBookingById(user, id, requestDto);
+
+        logger.info("Booking with ID {} successfully updated.", id);
+        return bookingDto;
     }
 
     @DeleteMapping("/{id}")
@@ -114,7 +144,11 @@ public class BookingController {
             @AuthenticationPrincipal User user,
             @PathVariable @Positive Long id
     ) {
+        logger.info("Received request to delete booking with ID: {} by user ID: {}.",
+                id, user.getId());
         bookingService.deleteBookingById(user, id);
+
+        logger.info("Booking with ID {} successfully deleted.", id);
         return ResponseEntity.noContent().build();
     }
 }

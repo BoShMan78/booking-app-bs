@@ -10,6 +10,8 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.Positive;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
@@ -31,6 +33,8 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 @RequestMapping(value = "/accommodations")
 public class AccommodationController {
+    private static final Logger logger = LogManager.getLogger(AccommodationController.class);
+
     private final AccommodationService accommodationService;
 
     @PreAuthorize("hasRole('ADMIN')")
@@ -41,8 +45,13 @@ public class AccommodationController {
             description = "Permits the addition of new accommodations"
     )
     public AccommodationDto createAccommodation(
-            @RequestBody @Valid CreateAccommodationRequestDto requestDto) {
-        return accommodationService.save(requestDto);
+            @RequestBody @Valid CreateAccommodationRequestDto requestDto
+    ) {
+        logger.info("Processing request to create a new accommodation: {}", requestDto);
+        AccommodationDto savedAccommodation = accommodationService.save(requestDto);
+
+        logger.info("Accommodation successfully created with ID: {}", savedAccommodation.id());
+        return savedAccommodation;
     }
 
     @GetMapping
@@ -53,7 +62,12 @@ public class AccommodationController {
     public List<AccommodationDto> getAccommodations(
             @ParameterObject @PageableDefault Pageable pageable
     ) {
-        return accommodationService.findAll(pageable);
+        logger.info("Received request to get all accommodations. Pagination parameters: {}",
+                pageable);
+        List<AccommodationDto> accommodationDtos = accommodationService.findAll(pageable);
+
+        logger.info("Retrieved {} accommodations.", accommodationDtos.size());
+        return accommodationDtos;
     }
 
     @GetMapping("/{id}")
@@ -62,7 +76,11 @@ public class AccommodationController {
             description = "Retrieves detailed information about a specific accommodation"
     )
     public AccommodationDto getAccommodationById(@PathVariable @Positive Long id) {
-        return accommodationService.findAccommodationById(id);
+        logger.info("Received request to get accommodation with ID: {}", id);
+        AccommodationDto accommodationDto = accommodationService.findAccommodationById(id);
+
+        logger.info("Accommodation information with ID {} successfully retrieved.", id);
+        return accommodationDto;
     }
 
     @PreAuthorize("hasRole('ADMIN')")
@@ -75,7 +93,13 @@ public class AccommodationController {
             @PathVariable @Positive Long id,
             @RequestBody UpdateAccommodationRequestDto requestDto
     ) {
-        return accommodationService.updateAccommodationById(id, requestDto);
+        logger.info("Received request to update accommodation with ID: {}. Update data: {}",
+                id, requestDto);
+        AccommodationDto accommodationDto = accommodationService
+                .updateAccommodationById(id, requestDto);
+
+        logger.info("Accommodation information with ID {} successfully updated.", id);
+        return accommodationDto;
     }
 
     @PreAuthorize("hasRole('ADMIN')")
@@ -85,7 +109,10 @@ public class AccommodationController {
             description = "Enables the removal of accommodations"
     )
     public ResponseEntity<Void> deleteAccommodationById(@PathVariable @Positive Long id) {
+        logger.info("Received request to delete accommodation with ID: {}", id);
         accommodationService.deleteAccommodationById(id);
+
+        logger.info("Accommodation with ID {} successfully deleted.", id);
         return ResponseEntity.noContent().build();
     }
 }
