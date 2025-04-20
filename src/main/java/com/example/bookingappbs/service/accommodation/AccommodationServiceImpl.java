@@ -20,6 +20,9 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @RequiredArgsConstructor
 public class AccommodationServiceImpl implements AccommodationService {
+    private static final String ACCOMMODATION_KEY_PREFIX = "accommodation::";
+    private static final String ACCOMMODATIONS_PAGE_KEY_PREFIX = "accommodations::all::";
+
     private final AccommodationRepository accommodationRepository;
     private final AccommodationMapper accommodationMapper;
     private final NotificationService notificationService;
@@ -33,27 +36,18 @@ public class AccommodationServiceImpl implements AccommodationService {
         Accommodation savedAccommodation = accommodationRepository.save(accommodation);
         AccommodationDto dto = accommodationMapper.toDto(savedAccommodation);
 
-        redisService.deletePattern("accommodations::all::*");
-        redisService.save("accommodation::" + savedAccommodation.getId(), dto);
+        clearAccommodationCache();
+        saveToCache(savedAccommodation.getId(), dto);
+        sendAccommodationNotification("New accommodation created", savedAccommodation);
 
-        notificationService.sendNotification(
-                "New accommodation created: \n"
-                        + "Accommodation ID: " + accommodation.getId() + "\n"
-                        + "Type: " + accommodation.getType() + "\n"
-                        + "Location: " + accommodation.getLocation().getStreet() + " "
-                        + accommodation.getLocation().getHouse() + ", "
-                        + accommodation.getLocation().getCity() + ", "
-                        + accommodation.getLocation().getCountry() + "\n"
-                        + "Daily rate: " + savedAccommodation.getDailyRate()
-        );
         return dto;
     }
 
     @Override
     public List<AccommodationDto> findAll(Pageable pageable) {
-        String key = "accommodations::all::page:"
-                + pageable.getPageNumber()
+        String key = ACCOMMODATIONS_PAGE_KEY_PREFIX + "page:" + pageable.getPageNumber()
                 + "::size:" + pageable.getPageSize();
+
         List<AccommodationDto> accommodationDtos = redisService
                 .findAll(key, AccommodationDto.class);
 
@@ -69,8 +63,8 @@ public class AccommodationServiceImpl implements AccommodationService {
 
     @Override
     public AccommodationDto findAccommodationById(Long id) {
-        String key = "accommodation::" + id;
-        AccommodationDto accommodationDto = (AccommodationDto) redisService
+        String key = ACCOMMODATION_KEY_PREFIX + id;
+        AccommodationDto accommodationDto = redisService
                 .find(key, AccommodationDto.class);
 
         if (accommodationDto == null) {
@@ -105,8 +99,8 @@ public class AccommodationServiceImpl implements AccommodationService {
         Accommodation savedAccommodation = accommodationRepository.save(existedAccommodation);
         AccommodationDto dto = accommodationMapper.toDto(savedAccommodation);
 
-        redisService.deletePattern("accommodations::all::*");
-        redisService.save("accommodation::" + id, dto);
+        clearAccommodationCache();
+        saveToCache(id, dto);
 
         return dto;
     }
@@ -114,21 +108,39 @@ public class AccommodationServiceImpl implements AccommodationService {
     @Override
     @Transactional
     public void deleteAccommodationById(Long id) {
-        redisService.deletePattern("accommodations::all::*");
-        redisService.delete("accommodation::" + id);
+        clearAccommodationCache();
+        redisService.delete(ACCOMMODATION_KEY_PREFIX + id);
 
         Accommodation accommodation = accommodationRepository.getAccommodationById(id);
         accommodationRepository.deleteById(id);
 
-        notificationService.sendNotification(
-                "Accommodation deleted: \n"
-                        + "Accommodation ID: " + accommodation.getId() + "\n"
-                        + "Type: " + accommodation.getType() + "\n"
-                        + "Location: " + accommodation.getLocation().getStreet() + " "
-                        + accommodation.getLocation().getHouse() + ", "
-                        + accommodation.getLocation().getCity() + ", "
-                        + accommodation.getLocation().getCountry() + "\n"
-                        + "Daily rate: " + accommodation.getDailyRate()
+        sendAccommodationNotification("Accommodation deleted", accommodation);
+    }
+
+    private void clearAccommodationCache() {
+        redisService.deletePattern(ACCOMMODATIONS_PAGE_KEY_PREFIX + "*");
+    }
+
+    private void saveToCache(Long id, AccommodationDto dto) {
+        redisService.save(ACCOMMODATION_KEY_PREFIX + id, dto);
+    }
+
+    private void sendAccommodationNotification(String title, Accommodation accommodation) {
+        String location = String.format("%s %s, %s, %s",
+                accommodation.getLocation().getStreet(),
+                accommodation.getLocation().getHouse(),
+                accommodation.getLocation().getCity(),
+                accommodation.getLocation().getCountry());
+
+        String message = String.format(
+                "%s:\nAccommodation ID: %d\nType: %s\nLocation: %s\nDaily rate: %.2f",
+                title,
+                accommodation.getId(),
+                accommodation.getType(),
+                location,
+                accommodation.getDailyRate()
         );
+
+        notificationService.sendNotification(message);
     }
 }

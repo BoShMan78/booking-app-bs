@@ -23,7 +23,6 @@ import com.example.bookingappbs.service.payment.PaymentService;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -36,6 +35,9 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @RequiredArgsConstructor
 public class BookingServiceImpl implements BookingService {
+    private static final String BOOKINGS_PAGE_KEY_PREFIX = "bookings";
+    private static final String BOOKING_KEY_PREFIX = "booking::";
+
     private final BookingRepository bookingRepository;
     private final BookingMapper bookingMapper;
     private final AccommodationRepository accommodationRepository;
@@ -59,16 +61,7 @@ public class BookingServiceImpl implements BookingService {
                 .orElseThrow(() -> new EntityNotFoundException("Cannot find accommodation by id: "
                         + requestDto.accommodationId()));
 
-        int overlappingBookings = bookingRepository.countOverLappingBookings(
-                accommodation,
-                requestDto.checkInDate(),
-                requestDto.checkOutDate(),
-                List.of(Status.CANCELED, Status.EXPIRED));
-
-        if (overlappingBookings >= accommodation.getAvailability()) {
-            throw new IllegalArgumentException("No available units for the selected dates. "
-                    + "Max capacity: " + accommodation.getAvailability());
-        }
+        validateAvailability(accommodation, requestDto.checkInDate(), requestDto.checkOutDate());
 
         Booking booking = bookingMapper.toModel(requestDto);
         booking.setStatus(Status.PENDING);
@@ -78,21 +71,9 @@ public class BookingServiceImpl implements BookingService {
         Booking savedBooking = bookingRepository.save(booking);
         BookingDto bookingDto = bookingMapper.toDto(savedBooking);
 
-        redisService.deletePattern("bookings*");
-        redisService.save("booking::" + savedBooking.getId(), bookingDto);
+        cacheBooking(savedBooking.getId(), bookingDto);
 
-        notificationService.sendNotification(
-                "New booking created: \n"
-                        + "Booking ID: " + booking.getId() + "\n"
-                        + "Accommodation ID: " + accommodation.getId() + "\n"
-                        + "Type: " + accommodation.getType() + "\n"
-                        + "Location: " + accommodation.getLocation().getStreet() + " "
-                        + accommodation.getLocation().getHouse() + ", "
-                        + accommodation.getLocation().getCity() + ", "
-                        + accommodation.getLocation().getCountry() + "\n"
-                        + "Check-in Date: " + booking.getCheckInDate() + "\n"
-                        + "Check-out Date: " + booking.getCheckOutDate()
-        );
+        sendBookingNotification("New booking created", savedBooking, accommodation);
 
         return bookingDto;
     }
@@ -103,8 +84,7 @@ public class BookingServiceImpl implements BookingService {
             Status status,
             Pageable pageable
     ) {
-        String cacheKeyPrefix = "bookings";
-        StringBuilder cacheKeyBuilder = new StringBuilder(cacheKeyPrefix);
+        StringBuilder cacheKeyBuilder = new StringBuilder(BOOKINGS_PAGE_KEY_PREFIX);
 
         Specification<Booking> specification = Specification.where(null);
 
@@ -134,7 +114,7 @@ public class BookingServiceImpl implements BookingService {
 
         List<BookingDto> bookingDtos = bookings.stream()
                 .map(bookingMapper::toDto)
-                .collect(Collectors.toList());
+                .toList();
 
         redisService.save(key, bookingDtos);
 
@@ -143,12 +123,12 @@ public class BookingServiceImpl implements BookingService {
 
     @Override
     public List<BookingDto> getBookingsByUser(User user, Pageable pageable) {
-        String key = "bookings::user::" + user.getId()
+        String key = BOOKINGS_PAGE_KEY_PREFIX + "::user::" + user.getId()
                 + "::page::" + pageable.getPageNumber()
                 + "::size::" + pageable.getPageSize()
                 + "::sort::" + pageable.getSort();
         List<BookingDto> cachedBookings = redisService.findAll(key, BookingDto.class);
-        if (cachedBookings != null && cachedBookings.size() > 0) {
+        if (cachedBookings != null && !cachedBookings.isEmpty()) {
             return cachedBookings;
         }
 
@@ -156,7 +136,7 @@ public class BookingServiceImpl implements BookingService {
 
         List<BookingDto> bookingDtos = bookingsByUser.stream()
                 .map(bookingMapper::toDto)
-                .collect(Collectors.toList());
+                .toList();
 
         redisService.save(key, bookingDtos);
 
@@ -165,8 +145,8 @@ public class BookingServiceImpl implements BookingService {
 
     @Override
     public BookingDto getBookingById(User user, Long id) {
-        String key = "booking::" + id;
-        BookingDto bookingDto = (BookingDto) redisService.find(key, BookingDto.class);
+        String key = BOOKING_KEY_PREFIX + id;
+        BookingDto bookingDto = redisService.find(key, BookingDto.class);
         if (bookingDto == null) {
             Booking existedBooking = bookingRepository.findById(id)
                     .orElseThrow(() ->
@@ -207,31 +187,13 @@ public class BookingServiceImpl implements BookingService {
             }
         }
 
-        LocalDate newCheckInDate = existedBooking.getCheckInDate();
-        LocalDate newCheckOutDate = existedBooking.getCheckOutDate();
+        LocalDate newCheckInDate = Optional.ofNullable(requestDto.checkInDate())
+                .orElse(existedBooking.getCheckInDate());
+        LocalDate newCheckOutDate = Optional.ofNullable(requestDto.checkOutDate())
+                .orElse(existedBooking.getCheckOutDate());
 
-        if (requestDto.checkInDate() != null) {
-            newCheckInDate = requestDto.checkInDate();
-        }
-        if (requestDto.checkOutDate() != null) {
-            newCheckOutDate = requestDto.checkOutDate();
-        }
-
-        if (newCheckInDate.isAfter(newCheckOutDate.minusDays(1))) {
-            throw new IllegalArgumentException("Check-in date must be before check-out date");
-        }
-
-        int overlappingBookings = bookingRepository.countOverlappingBookingsExcludingCurrent(
-                existedBooking.getAccommodation(),
-                newCheckInDate,
-                newCheckOutDate,
-                List.of(Status.CANCELED, Status.EXPIRED),
-                existedBooking.getId()
-        );
-
-        if (overlappingBookings >= existedBooking.getAccommodation().getAvailability()) {
-            throw new IllegalArgumentException("No available units for the new dates");
-        }
+        validateDates(newCheckInDate, newCheckOutDate);
+        validateAvailabilityExcludingBooking(existedBooking, newCheckInDate, newCheckOutDate);
 
         existedBooking.setCheckInDate(newCheckInDate);
         existedBooking.setCheckOutDate(newCheckOutDate);
@@ -239,8 +201,7 @@ public class BookingServiceImpl implements BookingService {
         Booking savedBooking = bookingRepository.save(existedBooking);
         BookingDto bookingDto = bookingMapper.toDto(savedBooking);
 
-        redisService.deletePattern("bookings*");
-        redisService.save("booking::" + id, bookingDto);
+        cacheBooking(id, bookingDto);
 
         return bookingDto;
     }
@@ -252,33 +213,18 @@ public class BookingServiceImpl implements BookingService {
                         .orElseThrow(() -> new EntityNotFoundException(
                                 "Booking with id " + id + " not found")
                         );
-        if (booking.getStatus() == Status.CANCELED) {
-            throw new IllegalArgumentException("Booking with id " + id + " is already canceled");
-        }
-        if (booking.isDeleted()) {
-            throw new IllegalArgumentException("Booking with id " + id + " is already deleted");
+
+        if (booking.getStatus() == Status.CANCELED || booking.isDeleted()) {
+            throw new IllegalArgumentException("Booking is already canceled or deleted");
         }
 
         booking.setStatus(Status.CANCELED);
         bookingRepository.save(booking);
         bookingRepository.delete(booking);
 
-        redisService.deletePattern("bookings*");
+        redisService.deletePattern(BOOKINGS_PAGE_KEY_PREFIX + "*");
 
-        Accommodation accommodation = booking.getAccommodation();
-
-        notificationService.sendNotification(
-                "Booking canceled:  \n"
-                        + "Booking ID: " + booking.getId() + "\n"
-                        + "Accommodation ID: " + accommodation.getId() + "\n"
-                        + "Type: " + accommodation.getType() + "\n"
-                        + "Location: " + accommodation.getLocation().getStreet() + " "
-                        + accommodation.getLocation().getHouse() + ", "
-                        + accommodation.getLocation().getCity() + ", "
-                        + accommodation.getLocation().getCountry() + "\n"
-                        + "Check-in Date: " + booking.getCheckInDate() + "\n"
-                        + "Check-out Date: " + booking.getCheckOutDate()
-        );
+        sendBookingNotification("Booking canceled", booking, booking.getAccommodation());
     }
 
     @Override
@@ -298,26 +244,19 @@ public class BookingServiceImpl implements BookingService {
             notificationService.sendNotification("No expired bookings today!");
         } else {
             for (Booking booking : expiredBookings) {
-                Accommodation accommodation = booking.getAccommodation();
-
                 booking.setStatus(Status.EXPIRED);
                 bookingRepository.save(booking);
-                notificationService.sendNotification(
-                        "Booking expired and accommodation released:\n"
-                                + "Booking ID: " + booking.getId() + "\n"
-                                + "Accommodation ID: " + accommodation.getId() + "\n"
-                                + "Type: " + accommodation.getType() + "\n"
-                                + "Location: " + accommodation.getLocation().getStreet() + " "
-                                + accommodation.getLocation().getHouse() + ", "
-                                + accommodation.getLocation().getCity() + ", "
-                                + accommodation.getLocation().getCountry() + "\n"
-                                + "Check-in Date: " + booking.getCheckInDate() + "\n"
-                                + "Check-out Date: " + booking.getCheckOutDate()
+
+                sendBookingNotification(
+                        "Booking expired and accommodation released",
+                        booking,
+                        booking.getAccommodation()
                 );
-                redisService.delete("booking::" + booking.getId());
+
+                redisService.delete(BOOKING_KEY_PREFIX + booking.getId());
             }
         }
-        redisService.deletePattern("bookings*");
+        redisService.deletePattern(BOOKINGS_PAGE_KEY_PREFIX + "*");
     }
 
     @Override
@@ -326,5 +265,67 @@ public class BookingServiceImpl implements BookingService {
                 .orElseThrow(() -> new EntityNotFoundException("Cannot find accommodation with id "
                         + accommodationId));
         return accommodationMapper.toDto(accommodation);
+    }
+
+    private void cacheBooking(Long id, BookingDto dto) {
+        redisService.deletePattern(BOOKINGS_PAGE_KEY_PREFIX + "*");
+        redisService.save(BOOKING_KEY_PREFIX + id, dto);
+    }
+
+    private void sendBookingNotification(
+            String title,
+            Booking booking,
+            Accommodation accommodation
+    ) {
+        notificationService.sendNotification(title + ": \n"
+                + "Booking ID: " + booking.getId() + "\n"
+                + "Accommodation ID: " + accommodation.getId() + "\n"
+                + "Type: " + accommodation.getType() + "\n"
+                + "Location: " + accommodation.getLocation().getStreet() + " "
+                + accommodation.getLocation().getHouse() + ", "
+                + accommodation.getLocation().getCity() + ", "
+                + accommodation.getLocation().getCountry() + "\n"
+                + "Check-in Date: " + booking.getCheckInDate() + "\n"
+                + "Check-out Date: " + booking.getCheckOutDate());
+    }
+
+    private void validateAvailability(
+            Accommodation accommodation,
+            LocalDate checkInDate,
+            LocalDate checkOutDate
+    ) {
+        int overlappingBookings = bookingRepository.countOverLappingBookings(
+                accommodation,
+                checkInDate,
+                checkOutDate,
+                List.of(Status.CANCELED, Status.EXPIRED));
+        if (overlappingBookings >= accommodation.getAvailability()) {
+            throw new IllegalArgumentException("No available units for the selected dates. "
+                    + "Max capacity: " + accommodation.getAvailability());
+        }
+    }
+
+    private void validateDates(LocalDate checkIndate, LocalDate checkOutDate) {
+        if (checkIndate.isAfter(checkOutDate.minusDays(1))) {
+            throw new IllegalArgumentException("Check-in date must be before check-out date");
+        }
+    }
+
+    private void validateAvailabilityExcludingBooking(
+            Booking booking,
+            LocalDate newCheckInDate,
+            LocalDate newCheckOutDate
+    ) {
+        int overlappingBookings = bookingRepository.countOverlappingBookingsExcludingCurrent(
+                booking.getAccommodation(),
+                newCheckInDate,
+                newCheckOutDate,
+                List.of(Status.CANCELED, Status.EXPIRED),
+                booking.getId()
+        );
+
+        if (overlappingBookings >= booking.getAccommodation().getAvailability()) {
+            throw new IllegalArgumentException("No available units for the new dates");
+        }
     }
 }

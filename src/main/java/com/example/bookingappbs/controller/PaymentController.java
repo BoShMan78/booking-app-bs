@@ -53,7 +53,7 @@ public class PaymentController {
             @AuthenticationPrincipal User user,
             Model model,
             Pageable pageable
-    ) throws StripeException {
+    ) {
         List<PaymentDto> paymentDtos = paymentProcessingService
                 .getPaymentsForCurrentUser(user.getId(), pageable);
         model.addAttribute("payments", paymentDtos);
@@ -126,7 +126,7 @@ public class PaymentController {
             @PathVariable Long paymentId,
             @AuthenticationPrincipal User user,
             Model model
-    ) throws StripeException {
+    ) {
         return paymentProcessingService.renewPaymentSession(paymentId, user, model);
     }
 }

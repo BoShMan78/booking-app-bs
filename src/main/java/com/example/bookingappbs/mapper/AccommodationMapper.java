@@ -23,8 +23,7 @@ public interface AccommodationMapper {
         try {
             return Type.valueOf(type);
         } catch (IllegalArgumentException e) {
-            System.err.println("Error converting string to enum: " + type);
-            throw e;
+            throw new IllegalArgumentException("Error converting string to enum: " + type);
         }
     }
 }

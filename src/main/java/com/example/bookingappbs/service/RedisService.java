@@ -5,17 +5,16 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
+@RequiredArgsConstructor
 public class RedisService {
-    @Autowired
-    private RedisTemplate<String, String> redisTemplate;
-    @Autowired
-    private ObjectMapper objectMapper;
+    private final RedisTemplate<String, String> redisTemplate;
+    private final ObjectMapper objectMapper;
 
     @Transactional
     public <T> void save(String key, T value) {
@@ -28,7 +27,7 @@ public class RedisService {
     }
 
     public <T> T find(String key, Class<T> clazz) {
-        String json = (String) redisTemplate.opsForValue().get(key);
+        String json = redisTemplate.opsForValue().get(key);
         if (json == null) {
             return null;
         }
@@ -40,7 +39,7 @@ public class RedisService {
     }
 
     public <T> List<T> findAll(String key, Class<T> clazz) {
-        String json = (String) redisTemplate.opsForValue().get(key);
+        String json = redisTemplate.opsForValue().get(key);
         if (json == null) {
             return Collections.emptyList();
         }

@@ -10,7 +10,6 @@ import com.example.bookingappbs.model.Payment.Status;
 import com.example.bookingappbs.repository.BookingRepository;
 import com.example.bookingappbs.repository.PaymentRepository;
 import java.util.List;
-import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -29,7 +28,7 @@ public class PaymentServiceImpl implements PaymentService {
         Page<Payment> payments = paymentRepository.findByBooking_User_Id(userId, pageable);
         return payments.stream()
                 .map(paymentMapper::toDto)
-                .collect(Collectors.toList());
+                .toList();
     }
 
     @Override
@@ -37,7 +36,7 @@ public class PaymentServiceImpl implements PaymentService {
         Page<Payment> payments = paymentRepository.findAll(pageable);
         return payments.stream()
                 .map(paymentMapper::toDto)
-                .collect(Collectors.toList());
+                .toList();
     }
 
     @Override

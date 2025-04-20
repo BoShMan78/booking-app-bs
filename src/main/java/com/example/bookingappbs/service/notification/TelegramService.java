@@ -26,6 +26,7 @@ public class TelegramService extends TelegramLongPollingBot implements Notificat
 
     @Override
     public void onUpdateReceived(Update update) {
+        //It's a method to process incoming messages, if needed
     }
 
     @Override

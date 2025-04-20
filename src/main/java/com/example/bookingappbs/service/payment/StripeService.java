@@ -68,7 +68,7 @@ public class StripeService {
                 .path("/payments/cancel");
         String cancelUrl = cancelUriBuilder.build().toUriString();
 
-        SessionCreateParams params = SessionCreateParams.builder()
+        return SessionCreateParams.builder()
                 .setMode(SessionCreateParams.Mode.PAYMENT)
                 .setSuccessUrl(successUrl)
                 .setCancelUrl(cancelUrl)
@@ -93,7 +93,5 @@ public class StripeService {
                 .putMetadata("booking_id", bookingDto.id().toString())
                 .putMetadata("user_id", bookingDto.userId().toString())
                 .build();
-
-        return params;
     }
 }
