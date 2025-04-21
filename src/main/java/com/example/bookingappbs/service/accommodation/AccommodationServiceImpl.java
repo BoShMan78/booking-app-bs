@@ -15,7 +15,6 @@ import lombok.RequiredArgsConstructor;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,7 +29,6 @@ public class AccommodationServiceImpl implements AccommodationService {
     private final AccommodationMapper accommodationMapper;
     private final NotificationService notificationService;
     private final RedisService redisService;
-    private final RedisTemplate<String, Object> redisTemplate;
 
     @Override
     @Transactional

@@ -32,8 +32,6 @@ import org.springframework.ui.Model;
 public class PaymentProcessingServiceImpl implements PaymentProcessingService {
     private static final Logger logger = LogManager.getLogger(PaymentProcessingServiceImpl.class);
 
-    @Value("${domain}")
-    private String domain;
     @Value("${currency}")
     private String currency;
     @Value("${payment.success.message}")

@@ -16,7 +16,6 @@ import com.example.bookingappbs.model.User;
 import com.example.bookingappbs.model.User.Role;
 import com.example.bookingappbs.repository.AccommodationRepository;
 import com.example.bookingappbs.repository.BookingRepository;
-import com.example.bookingappbs.repository.UserRepository;
 import com.example.bookingappbs.service.RedisService;
 import com.example.bookingappbs.service.notification.NotificationService;
 import com.example.bookingappbs.service.payment.PaymentService;
@@ -29,7 +28,6 @@ import org.apache.logging.log4j.Logger;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
-import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -44,10 +42,8 @@ public class BookingServiceImpl implements BookingService {
     private final BookingRepository bookingRepository;
     private final BookingMapper bookingMapper;
     private final AccommodationRepository accommodationRepository;
-    private final UserRepository userRepository;
     private final NotificationService notificationService;
     private final RedisService redisService;
-    private final RedisTemplate<String, Object> redisTemplate;
     private final AccommodationMapper accommodationMapper;
     private final PaymentService paymentService;
 
@@ -203,7 +199,7 @@ public class BookingServiceImpl implements BookingService {
                     throw new IllegalArgumentException("Cannot update booking with status "
                             + existedBooking.getStatus());
                 }
-                Optional.ofNullable(requestDto.status()).ifPresent(status -> {
+                Optional.of(requestDto.status()).ifPresent(status -> {
                     try {
                         existedBooking.setStatus(Status.valueOf(status));
                         logger.info("Booking ID {} status updated to: {}", id, status);
