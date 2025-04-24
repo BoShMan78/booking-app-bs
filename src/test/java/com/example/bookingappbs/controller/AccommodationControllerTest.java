@@ -16,7 +16,7 @@ import com.example.bookingappbs.dto.accommodation.AccommodationDto;
 import com.example.bookingappbs.dto.accommodation.CreateAccommodationRequestDto;
 import com.example.bookingappbs.dto.accommodation.UpdateAccommodationRequestDto;
 import com.example.bookingappbs.dto.address.AddressDto;
-import com.example.bookingappbs.model.Accommodation;
+import com.example.bookingappbs.dto.address.CreateAddressRequestDto;
 import com.example.bookingappbs.model.Accommodation.Type;
 import com.example.bookingappbs.model.Address;
 import com.example.bookingappbs.service.RedisService;
@@ -82,6 +82,7 @@ public class AccommodationControllerTest {
 
     private Address address;
     private AddressDto addressDto;
+    private CreateAddressRequestDto createAddressRequestDto;
     private CreateAccommodationRequestDto createRequestDto;
     private UpdateAccommodationRequestDto updateRequestDto;
 
@@ -108,6 +109,14 @@ public class AccommodationControllerTest {
                 .setHouse("1a")
                 .setApartment(1);
 
+        createAddressRequestDto = new CreateAddressRequestDto(
+                address.getCountry(),
+                address.getCity(),
+                address.getStreet(),
+                address.getHouse(),
+                address.getApartment()
+        );
+
         addressDto = new AddressDto(
                 null, // ID буде згенеровано базою даних
                 address.getCountry(),
@@ -118,8 +127,8 @@ public class AccommodationControllerTest {
         );
 
         createRequestDto = new CreateAccommodationRequestDto(
-                "APARTMENT",
-                address,
+                Type.APARTMENT,
+                createAddressRequestDto,
                 "1 bedroom",
                 List.of("parking", "wi-fi"),
                 BigDecimal.valueOf(50.50),
@@ -159,7 +168,7 @@ public class AccommodationControllerTest {
         // Given
         AccommodationDto expected = new AccommodationDto(
                 1L,
-                Accommodation.Type.valueOf(createRequestDto.type()),
+                Type.APARTMENT,
                 addressDto,
                 createRequestDto.size(),
                 createRequestDto.amenities(),

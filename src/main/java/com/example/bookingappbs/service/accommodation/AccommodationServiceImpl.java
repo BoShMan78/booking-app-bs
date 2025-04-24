@@ -52,45 +52,40 @@ public class AccommodationServiceImpl implements AccommodationService {
         String key = ACCOMMODATIONS_PAGE_KEY_PREFIX + "page:" + pageable.getPageNumber()
                 + "::size:" + pageable.getPageSize();
 
-        List<AccommodationDto> accommodationDtos = redisService
-                .findAll(key, AccommodationDto.class);
+        Optional<List<AccommodationDto>> cachedDtos = Optional
+                .ofNullable(redisService.findAll(key, AccommodationDto.class))
+                .filter(list -> !list.isEmpty());
 
-        if (accommodationDtos == null || accommodationDtos.isEmpty()) {
+        return cachedDtos.orElseGet(() -> {
             logger.info("Accommodations not found in cache. Fetching from database.");
-            accommodationDtos = accommodationRepository.findAll(pageable).stream()
+            List<AccommodationDto> dbDtos = accommodationRepository.findAll(pageable).stream()
                     .map(accommodationMapper::toDto)
                     .toList();
-
-            redisService.save(key, accommodationDtos);
+            redisService.save(key, dbDtos);
             logger.info("Accommodations fetched from database and saved to cache. Count: {}",
-                    accommodationDtos.size());
-        } else {
-            logger.info("Accommodations found in cache. Count: {}", accommodationDtos.size());
-        }
-        return accommodationDtos;
+                    dbDtos.size());
+            return dbDtos;
+        });
     }
 
     @Override
     public AccommodationDto findAccommodationById(Long id) {
         logger.info("Processing request to find accommodation by ID: {}", id);
         String key = ACCOMMODATION_KEY_PREFIX + id;
-        AccommodationDto accommodationDto = redisService
-                .find(key, AccommodationDto.class);
 
-        if (accommodationDto == null) {
-            logger.info("Accommodation with ID {} not found in cache. Fetching from database.",
-                    id);
-            Accommodation accommodation = accommodationRepository.findById(id).orElseThrow(
-                    () -> new EntityNotFoundException("Accommodation with id " + id + " not found")
-            );
-            accommodationDto = accommodationMapper.toDto(accommodation);
-
-            redisService.save(key, accommodationDto);
-            logger.info("Accommodation with ID {} fetched from database and saved to cache.", id);
-        } else {
-            logger.info("Accommodation with ID {} found in cache.", id);
-        }
-        return accommodationDto;
+        return Optional.ofNullable(redisService.find(key, AccommodationDto.class))
+                .orElseGet(() -> {
+                    logger.info("Accommodation with ID {} not found in cache. "
+                            + "Fetching from database.", id);
+                    Accommodation accommodation = accommodationRepository.findById(id).orElseThrow(
+                            () -> new EntityNotFoundException("Accommodation with id " + id
+                                    + " not found"));
+                    AccommodationDto dto = accommodationMapper.toDto(accommodation);
+                    redisService.save(key, dto);
+                    logger.info("Accommodation with ID {} fetched from database "
+                            + "and saved to cache.", id);
+                    return dto;
+                });
     }
 
     @Override
@@ -104,14 +99,7 @@ public class AccommodationServiceImpl implements AccommodationService {
                 .orElseThrow(() ->
                         new EntityNotFoundException("Can't find accommodation with id " + id));
 
-        Optional.ofNullable(requestDto.type()).ifPresent(existedAccommodation::setType);
-        Optional.ofNullable(requestDto.location()).ifPresent(existedAccommodation::setLocation);
-        Optional.ofNullable(requestDto.size()).ifPresent(existedAccommodation::setSize);
-        Optional.ofNullable(requestDto.amenities()).ifPresent(existedAccommodation::setAmenities);
-        Optional.ofNullable(requestDto.dailyRate()).ifPresent(existedAccommodation::setDailyRate);
-        if (requestDto.availability() != null && requestDto.availability() != 0) {
-            existedAccommodation.setAvailability(requestDto.availability());
-        }
+        accommodationMapper.updateAccommodationFromDto(requestDto, existedAccommodation);
 
         Accommodation savedAccommodation = accommodationRepository.save(existedAccommodation);
         AccommodationDto dto = accommodationMapper.toDto(savedAccommodation);

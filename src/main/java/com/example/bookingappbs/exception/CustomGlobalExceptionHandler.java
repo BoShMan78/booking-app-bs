@@ -13,12 +13,12 @@ import org.springframework.ui.Model;
 import org.springframework.validation.FieldError;
 import org.springframework.validation.ObjectError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
-import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
 
-@ControllerAdvice
+@RestControllerAdvice
 public class CustomGlobalExceptionHandler extends ResponseEntityExceptionHandler {
 
     @Override
@@ -28,14 +28,10 @@ public class CustomGlobalExceptionHandler extends ResponseEntityExceptionHandler
             HttpStatusCode status,
             WebRequest request
     ) {
-        Map<String, Object> body = new LinkedHashMap<>();
-        body.put("timestamp: ", LocalDateTime.now());
-        body.put("status: ", HttpStatus.BAD_REQUEST);
         List<String> errors = ex.getBindingResult().getAllErrors().stream()
                 .map(this::getErrorMessage)
                 .toList();
-        body.put("errors", errors);
-        return new ResponseEntity<>(body, headers, status);
+        return buildResponseEntity(HttpStatus.BAD_REQUEST, "Validation error", errors);
     }
 
     private String getErrorMessage(ObjectError e) {
@@ -48,19 +44,72 @@ public class CustomGlobalExceptionHandler extends ResponseEntityExceptionHandler
     }
 
     @ExceptionHandler(RegistrationException.class)
-    public ResponseEntity<Object> handleRegistrationException(RegistrationException exception,
-                                                              WebRequest request) {
-        Map<String, Object> body = new LinkedHashMap<>();
-        body.put("timestamp: ", LocalDateTime.now());
-        body.put("status: ", HttpStatus.CONFLICT.value());
-        body.put("errors: ", "Bad Request");
-        body.put("message", exception.getMessage());
-        return new ResponseEntity<>(body, HttpStatusCode.valueOf(HttpStatus.CONFLICT.value()));
+    public ResponseEntity<Object> handleRegistrationException(
+            RegistrationException exception,
+            WebRequest request
+    ) {
+        return buildResponseEntity(HttpStatus.CONFLICT, "Registration failed",
+                List.of("Bad Request"), exception.getMessage());
     }
 
     @ExceptionHandler(StripeException.class)
     public String handleStripeException(Model model, StripeException exception) {
         model.addAttribute("error", exception.getMessage());
         return "result";
+    }
+
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<Object> handleAccessDeniedException(
+            AccessDeniedException exception,
+            WebRequest request
+    ) {
+        return buildResponseEntity(HttpStatus.FORBIDDEN, "Access denied", List.of("Bad Request"),
+                exception.getMessage());
+    }
+
+    @ExceptionHandler(EntityNotFoundException.class)
+    public ResponseEntity<Object> handleEntityNotFoundException(
+            EntityNotFoundException exception,
+            WebRequest request
+    ) {
+        return buildResponseEntity(HttpStatus.NOT_FOUND, "Entity not found", List.of("Bad Request"),
+                exception.getMessage());
+    }
+
+    @ExceptionHandler(PendingPaymentException.class)
+    public ResponseEntity<Object> handlePaymentException(
+            PendingPaymentException exception,
+            WebRequest request
+    ) {
+        return buildResponseEntity(HttpStatus.CONFLICT, "Conflict with pending payments",
+                List.of(exception.getMessage()), exception.getMessage());
+    }
+
+    private ResponseEntity<Object> buildResponseEntity(
+            HttpStatus status,
+            String error,
+            List<String> errors
+    ) {
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("timestamp", LocalDateTime.now());
+        body.put("status", status.value());
+        body.put("error", error);
+        body.put("errors", errors);
+        return new ResponseEntity<>(body, status);
+    }
+
+    private ResponseEntity<Object> buildResponseEntity(
+            HttpStatus status,
+            String error,
+            List<String> errors,
+            String message
+    ) {
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("timestamp", LocalDateTime.now());
+        body.put("status", status.value());
+        body.put("error", error);
+        body.put("errors", errors);
+        body.put("message", message);
+        return new ResponseEntity<>(body, status);
     }
 }

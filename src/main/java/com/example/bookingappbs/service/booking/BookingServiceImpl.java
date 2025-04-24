@@ -27,7 +27,6 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.jpa.domain.Specification;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -89,26 +88,17 @@ public class BookingServiceImpl implements BookingService {
         logger.info("Processing request to get bookings by user ID: {}, status: {}, "
                 + "and pagination: {}", userId, status, pageable);
         StringBuilder cacheKeyBuilder = new StringBuilder(BOOKINGS_PAGE_KEY_PREFIX);
-
-        Specification<Booking> specification = Specification.where(null);
-
         if (userId != null) {
-            specification = specification.and((root, query, criteriaBuilder) ->
-                    criteriaBuilder.equal(root.get("user").get("id"), userId));
             cacheKeyBuilder.append("::user::").append(userId);
         }
-
         if (status != null) {
-            specification = specification.and((root, query, criteriaBuilder) ->
-                    criteriaBuilder.equal(root.get("status"), status));
             cacheKeyBuilder.append("::status::").append(status);
         }
-
         cacheKeyBuilder.append("::page::").append(pageable.getPageNumber())
                 .append("::size::").append(pageable.getPageSize())
                 .append("::sort::").append(pageable.getSort());
-
         String key = cacheKeyBuilder.toString();
+
         List<BookingDto> cachedBookings = redisService.findAll(key, BookingDto.class);
         if (cachedBookings != null && !cachedBookings.isEmpty()) {
             logger.info("Retrieved bookings from cache with key: {}, count: {}",
@@ -116,8 +106,8 @@ public class BookingServiceImpl implements BookingService {
             return cachedBookings;
         }
 
-        Page<Booking> bookings = bookingRepository.findAll(specification, pageable);
-
+        Page<Booking> bookings = bookingRepository
+                .findByUserIdAndStatusOptional(userId, status, pageable);
         List<BookingDto> bookingDtos = bookings.stream()
                 .map(bookingMapper::toDto)
                 .toList();

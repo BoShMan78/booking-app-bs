@@ -168,7 +168,7 @@ public class UserControllerTest {
         UpdateCurrentUserRequestDto updateDto = new UpdateCurrentUserRequestDto(
                 updatedFirstName,
                 "User",
-                "test@example.com",
+                null,
                 "newPassword#1"
         );
 

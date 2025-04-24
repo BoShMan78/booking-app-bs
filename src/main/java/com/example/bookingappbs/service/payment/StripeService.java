@@ -6,6 +6,7 @@ import com.stripe.exception.StripeException;
 import com.stripe.model.Charge;
 import com.stripe.model.checkout.Session;
 import com.stripe.param.checkout.SessionCreateParams;
+import com.stripe.param.checkout.SessionCreateParams.LineItem;
 import jakarta.annotation.PostConstruct;
 import java.math.BigDecimal;
 import java.util.HashMap;
@@ -76,17 +77,41 @@ public class StripeService {
             BookingDto bookingDto,
             BigDecimal totalAmount
     ) {
+        String successUrl = buildSuccessUrl(bookingDto.id());
+        String cancelUrl = buildCancelUrl();
+        SessionCreateParams.LineItem lineItem = buildLineItem(bookingDto, totalAmount);
+        Map<String, String> metadata = buildMetadata(bookingDto);
+
+        return SessionCreateParams.builder()
+                .setMode(SessionCreateParams.Mode.PAYMENT)
+                .setSuccessUrl(successUrl)
+                .setCancelUrl(cancelUrl)
+                .addLineItem(lineItem)
+                .putMetadata("booking_id", bookingDto.id().toString())
+                .putMetadata("user_id", bookingDto.userId().toString())
+                .build();
+    }
+
+    private String buildSuccessUrl(Long id) {
         UriComponentsBuilder successUriBuilder = UriComponentsBuilder.fromUriString(domain)
                 .path("/payments/success")
                 .queryParam("session_id", "{CHECKOUT_SESSION_ID}");
         String successUrl = successUriBuilder.build().toUriString();
-        logger.debug("Stripe success URL: {}", successUrl);
 
+        logger.debug("Stripe success URL: {}", successUrl);
+        return successUrl;
+    }
+
+    private String buildCancelUrl() {
         UriComponentsBuilder cancelUriBuilder = UriComponentsBuilder.fromUriString(domain)
                 .path("/payments/cancel");
         String cancelUrl = cancelUriBuilder.build().toUriString();
-        logger.debug("Stripe cancel URL: {}", cancelUrl);
 
+        logger.debug("Stripe cancel URL: {}", cancelUrl);
+        return cancelUrl;
+    }
+
+    private LineItem buildLineItem(BookingDto bookingDto, BigDecimal totalAmount) {
         SessionCreateParams.LineItem.PriceData.ProductData productData = SessionCreateParams
                 .LineItem
                 .PriceData
@@ -109,20 +134,17 @@ public class StripeService {
                 .setQuantity(1L)
                 .setPriceData(priceData)
                 .build();
-        logger.debug("Stripe line item: {}", lineItem);
 
+        logger.debug("Stripe line item: {}", lineItem);
+        return lineItem;
+    }
+
+    private Map<String, String> buildMetadata(BookingDto bookingDto) {
         Map<String, String> metadata = new HashMap<>();
         metadata.put("booking_id", bookingDto.id().toString());
         metadata.put("user_id", bookingDto.userId().toString());
-        logger.debug("Stripe metadata: {}", metadata);
 
-        return SessionCreateParams.builder()
-                .setMode(SessionCreateParams.Mode.PAYMENT)
-                .setSuccessUrl(successUrl)
-                .setCancelUrl(cancelUrl)
-                .addLineItem(lineItem)
-                .putMetadata("booking_id", bookingDto.id().toString())
-                .putMetadata("user_id", bookingDto.userId().toString())
-                .build();
+        logger.debug("Stripe metadata: {}", metadata);
+        return metadata;
     }
 }

@@ -209,9 +209,6 @@ public class UserServiceTest {
         );
 
         when(userRepository.findById(currentUser.getId())).thenReturn(Optional.of(existingUser));
-        when(userRepository.existsByEmail(updateCurrentUserRequestDto.email())).thenReturn(false);
-        when(passwordEncoder.encode(updateCurrentUserRequestDto.password()))
-                .thenReturn("newEncodedPassword");
         when(userRepository.save(any(User.class))).thenReturn(updatedLocalUser);
         when(userMapper.toDto(any(User.class))).thenReturn(expectedUpdatedDto);
 
@@ -222,10 +219,10 @@ public class UserServiceTest {
         // Then
         assertThat(actualDto).isEqualTo(expectedUpdatedDto);
         verify(userRepository, times(1)).findById(currentUser.getId());
-        verify(userRepository, times(1)).existsByEmail(updateCurrentUserRequestDto.email());
-        verify(passwordEncoder, times(1)).encode(updateCurrentUserRequestDto.password());
+        verify(userMapper, times(1))
+                .updateUserFromDto(updateCurrentUserRequestDto, existingUser, passwordEncoder);
         verify(userRepository, times(1)).save(existingUser);
-        verify(userMapper, times(1)).toDto(existingUser);
-        verifyNoMoreInteractions(userRepository, userMapper, passwordEncoder);
+        verify(userMapper, times(1)).toDto(updatedLocalUser); ;
+        verifyNoMoreInteractions(userRepository, userMapper);
     }
 }

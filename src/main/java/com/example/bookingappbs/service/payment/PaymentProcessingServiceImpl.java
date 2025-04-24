@@ -122,36 +122,7 @@ public class PaymentProcessingServiceImpl implements PaymentProcessingService {
         try {
             Session session = stripeService.retrieveSession(sessionId);
             if (session.getPaymentStatus().equals(Status.PAID.toString())) {
-                PaymentDto paymentDto = paymentService.findBySessionId(sessionId);
-                paymentService.updatePaymentStatus(sessionId, Status.PAID);
-                model.addAttribute(attributeMessage, paymentSuccessMessage);
-
-                BookingDto bookingDto = bookingService
-                        .getBookingById(null, paymentDto.bookingId());
-                AccommodationDto accommodationDto = accommodationService
-                        .findAccommodationById(bookingDto.accommodationId());
-                String telegramMessage = String.format(
-                        "✅ Successful Payment!\n\n"
-                                + "Payment ID: %d\n"
-                                + "Booking ID: %d\n"
-                                + "Accommodation: %s\n"
-                                + "Check-in Date: %s\n"
-                                + "Check-out Date: %s\n"
-                                + "Amount: %.2f %s\n"
-                                + "Stripe Session ID: %s",
-                        paymentDto.id(),
-                        bookingDto.id(),
-                        accommodationDto.type(),
-                        bookingDto.checkInDate().toString(),
-                        bookingDto.checkOutDate().toString(),
-                        paymentDto.amountToPay(),
-                        currency,
-                        sessionId
-                );
-                notificationService.sendNotification(telegramMessage);
-
-                logger.info("Payment success notification sent for session ID: {}", sessionId);
-                return "payment_success";
+                return processSuccessfulPayment(sessionId, model);
             } else {
                 logger.warn("Stripe session {} payment status is PENDING.", sessionId);
                 model.addAttribute(attributeMessage, paymentPendingMessage + sessionId);
@@ -167,6 +138,49 @@ public class PaymentProcessingServiceImpl implements PaymentProcessingService {
             model.addAttribute(attributeMessage, paymentErrorMessage + e.getMessage());
             return "payment_error";
         }
+    }
+
+    private String processSuccessfulPayment(String sessionId, Model model) {
+        PaymentDto paymentDto = paymentService.findBySessionId(sessionId);
+        paymentService.updatePaymentStatus(sessionId, Status.PAID);
+        model.addAttribute(attributeMessage, paymentSuccessMessage);
+
+        BookingDto bookingDto = bookingService.getBookingById(null, paymentDto.bookingId());
+        AccommodationDto accommodationDto = accommodationService
+                .findAccommodationById(bookingDto.accommodationId());
+        sendPaymentSuccessNotification(paymentDto, bookingDto, accommodationDto, sessionId);
+
+        logger.info("Payment success processed and notification sent for session ID: {}",
+                sessionId);
+        return "payment_success";
+    }
+
+    private void sendPaymentSuccessNotification(
+            PaymentDto paymentDto,
+            BookingDto bookingDto,
+            AccommodationDto accommodationDto,
+            String sessionId
+    ) {
+        String telegramMessage = String.format(
+                "✅ Successful Payment!\n\n"
+                        + "Payment ID: %d\n"
+                        + "Booking ID: %d\n"
+                        + "Accommodation: %s\n"
+                        + "Check-in Date: %s\n"
+                        + "Check-out Date: %s\n"
+                        + "Amount: %.2f %s\n"
+                        + "Stripe Session ID: %s",
+                paymentDto.id(),
+                bookingDto.id(),
+                accommodationDto.type(),
+                bookingDto.checkInDate().toString(),
+                bookingDto.checkOutDate().toString(),
+                paymentDto.amountToPay(),
+                currency,
+                sessionId
+        );
+        notificationService.sendNotification(telegramMessage);
+        logger.info("Payment success notification sent for session ID: {}", sessionId);
     }
 
     @Override

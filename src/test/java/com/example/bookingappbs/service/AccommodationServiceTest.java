@@ -1,7 +1,6 @@
 package com.example.bookingappbs.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.times;
@@ -13,6 +12,7 @@ import com.example.bookingappbs.dto.accommodation.AccommodationDto;
 import com.example.bookingappbs.dto.accommodation.CreateAccommodationRequestDto;
 import com.example.bookingappbs.dto.accommodation.UpdateAccommodationRequestDto;
 import com.example.bookingappbs.dto.address.AddressDto;
+import com.example.bookingappbs.dto.address.CreateAddressRequestDto;
 import com.example.bookingappbs.mapper.AccommodationMapper;
 import com.example.bookingappbs.model.Accommodation;
 import com.example.bookingappbs.model.Accommodation.Type;
@@ -57,6 +57,7 @@ public class AccommodationServiceTest {
 
     private Address address;
     private AddressDto addressDto;
+    private CreateAddressRequestDto createAddressRequestDto;
 
     @BeforeEach
     void setUp() {
@@ -75,6 +76,14 @@ public class AccommodationServiceTest {
                 address.getHouse(),
                 address.getApartment()
         );
+
+        createAddressRequestDto = new CreateAddressRequestDto(
+                address.getCountry(),
+                address.getCity(),
+                address.getStreet(),
+                address.getHouse(),
+                address.getApartment()
+        );
     }
 
     @Test
@@ -82,16 +91,16 @@ public class AccommodationServiceTest {
     public void save_ValidCreateAccommodationRequestDto_ReturnAccommodationDto() {
         // Given
         CreateAccommodationRequestDto requestDto = new CreateAccommodationRequestDto(
-                Type.APARTMENT.toString(),
-                address,
+                Type.APARTMENT,
+                createAddressRequestDto,
                 "2 bedroom",
                 List.of("TV"),
                 BigDecimal.valueOf(50.0),
                 1
         );
         Accommodation accommodationToSave = new Accommodation()
-                .setType(Type.valueOf(requestDto.type()))
-                .setLocation(requestDto.location())
+                .setType(Type.APARTMENT)
+                .setLocation(address)
                 .setSize(requestDto.size())
                 .setAmenities(requestDto.amenities())
                 .setDailyRate(requestDto.dailyRate());
@@ -207,7 +216,7 @@ public class AccommodationServiceTest {
                 .setSize("1 bedroom")
                 .setDailyRate(BigDecimal.valueOf(60.0))
                 .setAvailability(2);
-        Accommodation updatedAccommodation = new Accommodation()
+        Accommodation savedAccommodation = new Accommodation()
                 .setId(accommodationId)
                 .setType(requestDto.type())
                 .setLocation(requestDto.location())
@@ -215,20 +224,20 @@ public class AccommodationServiceTest {
                 .setDailyRate(requestDto.dailyRate())
                 .setAvailability(requestDto.availability());
         AccommodationDto expectedDto = new AccommodationDto(
-                updatedAccommodation.getId(),
-                updatedAccommodation.getType(),
+                savedAccommodation.getId(),
+                savedAccommodation.getType(),
                 addressDto,
-                updatedAccommodation.getSize(),
-                updatedAccommodation.getAmenities(),
-                updatedAccommodation.getDailyRate(),
-                updatedAccommodation.getAvailability()
+                savedAccommodation.getSize(),
+                savedAccommodation.getAmenities(),
+                savedAccommodation.getDailyRate(),
+                savedAccommodation.getAvailability()
         );
 
         when(accommodationRepository.findById(accommodationId))
                 .thenReturn(Optional.of(existingAccommodation));
-        when(accommodationRepository.save(any(Accommodation.class)))
-                .thenReturn(updatedAccommodation);
-        when(accommodationMapper.toDto(updatedAccommodation)).thenReturn(expectedDto);
+        when(accommodationRepository.save(existingAccommodation))
+                .thenReturn(savedAccommodation);
+        when(accommodationMapper.toDto(savedAccommodation)).thenReturn(expectedDto);
         doNothing().when(redisService).deletePattern("accommodations::all::*");
         doNothing().when(redisService).save("accommodation::1", expectedDto);
 
@@ -240,10 +249,14 @@ public class AccommodationServiceTest {
         assertThat(actualDto).isEqualTo(expectedDto);
         verify(accommodationRepository, times(1)).findById(accommodationId);
         verify(accommodationRepository, times(1)).save(existingAccommodation);
-        verify(accommodationMapper, times(1)).toDto(updatedAccommodation);
+        verify(accommodationMapper, times(1))
+                .updateAccommodationFromDto(requestDto, existingAccommodation);
+        verify(accommodationMapper, times(1)).toDto(savedAccommodation);
         verify(redisService, times(1)).deletePattern("accommodations::all::*");
         verify(redisService, times(1)).save("accommodation::1", expectedDto);
         verifyNoMoreInteractions(accommodationRepository, accommodationMapper, redisService);
+        verify(accommodationMapper, times(1))
+                .updateAccommodationFromDto(requestDto, existingAccommodation);
     }
 
     @Test

@@ -47,7 +47,6 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.jpa.domain.Specification;
 import org.springframework.security.test.context.support.WithMockUser;
 
 @ExtendWith(MockitoExtension.class)
@@ -207,7 +206,7 @@ public class BookingServiceTest {
                 + "::sort::" + pageable.getSort();
         when(redisService.findAll(key, BookingDto.class)).thenReturn(null);
         Page<Booking> bookingPage = new PageImpl<>(List.of(new Booking().setId(bookingId)));
-        when(bookingRepository.findAll(any(Specification.class), eq(pageable)))
+        when(bookingRepository.findByUserIdAndStatusOptional(userId, status, pageable))
                 .thenReturn(bookingPage);
         List<BookingDto> bookingDtos = List.of(new BookingDto(
                 bookingId,
@@ -226,7 +225,8 @@ public class BookingServiceTest {
         // Then
         assertThat(result).isEqualTo(bookingDtos);
         verify(redisService, times(1)).findAll(key, BookingDto.class);
-        verify(bookingRepository, times(1)).findAll(any(Specification.class), eq(pageable));
+        verify(bookingRepository, times(1))
+                .findByUserIdAndStatusOptional(userId, status, pageable);
         verify(bookingMapper, times(1)).toDto(any(Booking.class));
         verify(redisService, times(1)).save(key, bookingDtos);
         verifyNoMoreInteractions(bookingRepository, bookingMapper, redisService);
