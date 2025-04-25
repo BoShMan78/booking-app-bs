@@ -12,13 +12,14 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.example.bookingappbs.dto.payment.PaymentDto;
 import com.example.bookingappbs.model.Payment.Status;
+import com.example.bookingappbs.model.Role;
 import com.example.bookingappbs.model.User;
-import com.example.bookingappbs.model.User.Role;
 import com.example.bookingappbs.service.accommodation.AccommodationService;
 import com.example.bookingappbs.service.booking.BookingService;
 import com.example.bookingappbs.service.payment.PaymentProcessingService;
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Set;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -58,16 +59,20 @@ public class PaymentControllerTest {
     private User adminUser;
     private PaymentDto paymentDto;
     private Pageable pageable;
+    private Role customerRole;
+    private Role adminRole;
 
     @BeforeEach
     void setUp() {
+        customerRole = new Role("CUSTOMER");
+        adminRole = new Role("ADMIN");
         testUser = new User()
                 .setId(1L)
                 .setEmail("user@example.com")
                 .setPassword("password")
                 .setFirstName("John")
                 .setLastName("Doe")
-                .setRole(Role.CUSTOMER);
+                .setRoles(Set.of(customerRole));
 
         adminUser = new User()
                 .setId(2L)
@@ -75,7 +80,7 @@ public class PaymentControllerTest {
                 .setPassword("admin")
                 .setFirstName("Admin")
                 .setLastName("User")
-                .setRole(Role.ADMIN);
+                .setRoles(Set.of(adminRole));
 
         paymentDto = new PaymentDto(
                 10L,

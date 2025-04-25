@@ -1,5 +1,6 @@
 package com.example.bookingappbs.controller;
 
+import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.is;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
@@ -10,8 +11,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.example.bookingappbs.dto.user.UpdateCurrentUserRequestDto;
 import com.example.bookingappbs.dto.user.UpdateUserRoleRequestDto;
 import com.example.bookingappbs.dto.user.UserResponseDto;
+import com.example.bookingappbs.model.Role;
 import com.example.bookingappbs.model.User;
-import com.example.bookingappbs.model.User.Role;
 import com.example.bookingappbs.service.accommodation.AccommodationService;
 import com.example.bookingappbs.service.booking.BookingService;
 import com.example.bookingappbs.service.notification.TelegramService;
@@ -20,6 +21,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.List;
+import java.util.Set;
 import javax.sql.DataSource;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -69,6 +71,8 @@ public class UserControllerTest {
     private UserResponseDto userResponseDto;
     private UpdateUserRoleRequestDto updateUserRoleRequestDto;
     private UpdateCurrentUserRequestDto updateCurrentUserRequestDto;
+    private Role customerRole;
+    private Role adminRole;
 
     @BeforeEach
     void setUp(@Autowired WebApplicationContext context,
@@ -89,20 +93,23 @@ public class UserControllerTest {
         userId = 1L;
         email = "test@example.com";
 
+        customerRole = new Role("CUSTOMER");
+        adminRole = new Role("ADMIN");
+
         mockUser = new User();
         mockUser.setId(userId);
         mockUser.setEmail(email);
-        mockUser.setRole(Role.CUSTOMER);
+        mockUser.setRoles(Set.of(customerRole));
 
         userResponseDto = new UserResponseDto(
                 userId,
                 email,
                 "Test",
                 "User",
-                Role.CUSTOMER.name()
+                List.of(customerRole.getName())
         );
 
-        updateUserRoleRequestDto = new UpdateUserRoleRequestDto(Role.ADMIN);
+        updateUserRoleRequestDto = new UpdateUserRoleRequestDto(1L);
 
         updateCurrentUserRequestDto = new UpdateCurrentUserRequestDto(
                 "Updated",
@@ -142,7 +149,7 @@ public class UserControllerTest {
                         .content(objectMapper.writeValueAsString(updateUserRoleRequestDto)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id", is(targetUserId.intValue())))
-                .andExpect(jsonPath("$.role", is(updateUserRoleRequestDto.role().name())));
+                .andExpect(jsonPath("$.roles", contains(adminRole.getName())));
     }
 
     @Test
@@ -156,7 +163,7 @@ public class UserControllerTest {
                 .andExpect(jsonPath("$.email", is(email)))
                 .andExpect(jsonPath("$.firstName", is("Test")))
                 .andExpect(jsonPath("$.lastName", is("User")))
-                .andExpect(jsonPath("$.role", is(Role.CUSTOMER.name())));
+                .andExpect(jsonPath("$.roles", contains(customerRole.getName())));
     }
 
     @Test
@@ -181,6 +188,6 @@ public class UserControllerTest {
                 .andExpect(jsonPath("$.firstName", is(updatedFirstName)))
                 .andExpect(jsonPath("$.lastName", is("User")))
                 .andExpect(jsonPath("$.email", is("test@example.com")))
-                .andExpect(jsonPath("$.role", is(Role.CUSTOMER.name())));
+                .andExpect(jsonPath("$.roles", contains(customerRole.getName())));
     }
 }

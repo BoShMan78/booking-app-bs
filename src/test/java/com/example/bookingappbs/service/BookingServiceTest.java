@@ -24,8 +24,8 @@ import com.example.bookingappbs.model.Accommodation.Type;
 import com.example.bookingappbs.model.Address;
 import com.example.bookingappbs.model.Booking;
 import com.example.bookingappbs.model.Booking.Status;
+import com.example.bookingappbs.model.Role;
 import com.example.bookingappbs.model.User;
-import com.example.bookingappbs.model.User.Role;
 import com.example.bookingappbs.repository.AccommodationRepository;
 import com.example.bookingappbs.repository.BookingRepository;
 import com.example.bookingappbs.repository.UserRepository;
@@ -36,6 +36,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -85,6 +86,8 @@ public class BookingServiceTest {
     private String singleBookingCacheKey;
     private UpdateBookingRequestDto updateBookingRequestDto;
     private User admin;
+    private Role customerRole;
+    private Role adminRole;
 
     @BeforeEach
     void setUp() {
@@ -108,8 +111,11 @@ public class BookingServiceTest {
                 accommodationId
         );
 
+        customerRole = new Role("CUSTOMER");
+        adminRole = new Role("ADMIN");
+
         userId = 1L;
-        user = new User().setId(userId).setRole(Role.CUSTOMER);
+        user = new User().setId(userId).setRoles(Set.of(customerRole));
 
         booking = new Booking().setCheckInDate(createBookingRequestDto.checkInDate())
                 .setCheckOutDate(createBookingRequestDto.checkOutDate())
@@ -144,7 +150,7 @@ public class BookingServiceTest {
                 Status.CONFIRMED.toString()
         );
 
-        admin = new User().setId(2L).setRole(Role.ADMIN);
+        admin = new User().setId(2L).setRoles(Set.of(adminRole));
     }
 
     @Test
@@ -278,6 +284,8 @@ public class BookingServiceTest {
                 .thenReturn(0);
         when(bookingRepository.save(any(Booking.class))).thenReturn(booking);
         when(bookingMapper.toDto(booking)).thenReturn(bookingDto);
+
+        System.out.println("Admin roles: " + admin.getRoles());
 
         // When
         BookingDto result = bookingService

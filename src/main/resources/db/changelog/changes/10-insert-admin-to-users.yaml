@@ -11,13 +11,21 @@ databaseChangeLog:
                   value: admin@example.com
               - column:
                   name: password
-                  value: $2a$10$2y03kivOdVnunKG2k53YeO8VO6Ks1UFPsWixKvl9PKtQsyXAFncmi #Password#1
+                  value: $2a$10$2y03kivOdVnunKG2k53YeO8VO6Ks1UFPsWixKvl9PKtQsyXAFncmi
               - column:
                   name: first_name
                   value: Super
               - column:
                   name: last_name
                   value: Admin
+
+        - insert:
+            tableName: users_roles
+            columns:
               - column:
-                  name: role
-                  value: ADMIN
+                  name: user_id
+                  valueComputed: "(SELECT id FROM users WHERE email = 'admin@example.com')"
+
+              - column:
+                  name: role_id
+                  valueComputed: "(SELECT id FROM roles WHERE name = 'ADMIN')"

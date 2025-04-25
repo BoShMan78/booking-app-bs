@@ -13,7 +13,6 @@ import com.example.bookingappbs.model.Accommodation;
 import com.example.bookingappbs.model.Booking;
 import com.example.bookingappbs.model.Booking.Status;
 import com.example.bookingappbs.model.User;
-import com.example.bookingappbs.model.User.Role;
 import com.example.bookingappbs.repository.AccommodationRepository;
 import com.example.bookingappbs.repository.BookingRepository;
 import com.example.bookingappbs.service.RedisService;
@@ -178,12 +177,12 @@ public class BookingServiceImpl implements BookingService {
                         new EntityNotFoundException("Booking with id " + id + " not found"));
 
         if (requestDto.status() != null) {
-            if (user.getRole().equals(Role.CUSTOMER)) {
+            if (user.getRoles().stream().noneMatch(role -> role.getName().equals("ADMIN"))) {
                 throw new AccessDeniedException(
                         "The user does not have permission to change the booking status. "
                                 + "Please contact the administrator.");
             }
-            if (user.getRole().equals(Role.ADMIN)) {
+            if (user.getRoles().stream().anyMatch(role -> role.getName().equals("ADMIN"))) {
                 if (existedBooking.getStatus() == Status.CANCELED
                         || existedBooking.getStatus() == Status.EXPIRED) {
                     throw new IllegalArgumentException("Cannot update booking with status "

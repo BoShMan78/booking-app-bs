@@ -1,0 +1,17 @@
+databaseChangeLog:
+  - changeSet:
+      id: insert-default-roles
+      author: your_name
+      changes:
+        - insert:
+            tableName: roles
+            columns:
+              - column:
+                  name: name
+                  value: ADMIN
+        - insert:
+            tableName: roles
+            columns:
+              - column:
+                  name: name
+                  value: CUSTOMER

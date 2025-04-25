@@ -8,12 +8,13 @@ import com.example.bookingappbs.dto.user.UserLoginResponseDto;
 import com.example.bookingappbs.dto.user.UserRegistrationRequestDto;
 import com.example.bookingappbs.dto.user.UserResponseDto;
 import com.example.bookingappbs.exception.RegistrationException;
-import com.example.bookingappbs.model.User.Role;
+import com.example.bookingappbs.model.Role;
 import com.example.bookingappbs.security.AuthenticationService;
 import com.example.bookingappbs.service.accommodation.AccommodationService;
 import com.example.bookingappbs.service.booking.BookingService;
 import com.example.bookingappbs.service.user.UserService;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -51,9 +52,11 @@ public class AuthenticationControllerTest {
     private UserLoginResponseDto loginResponseDto;
     private RegistrationException registrationException;
     private RuntimeException loginException;
+    private Role customerRole;
 
     @BeforeEach
     void setUp() {
+        customerRole = new Role("CUSTOMER");
         registrationDto = new UserRegistrationRequestDto(
                 "test@example.com",
                 "Password#1",
@@ -66,7 +69,7 @@ public class AuthenticationControllerTest {
                 "test@example.com",
                 "John",
                 "Doe",
-                Role.CUSTOMER.toString()
+                List.of(customerRole.getName())
         );
         loginDto = new UserLoginRequestDto("test@example.com", "Password#1");
         loginResponseDto = new UserLoginResponseDto("test-jwt-token");
@@ -88,7 +91,7 @@ public class AuthenticationControllerTest {
                 .andExpect(MockMvcResultMatchers.jsonPath("$.email").value("test@example.com"))
                 .andExpect(MockMvcResultMatchers.jsonPath("$.firstName").value("John"))
                 .andExpect(MockMvcResultMatchers.jsonPath("$.lastName").value("Doe"))
-                .andExpect(MockMvcResultMatchers.jsonPath("$.role").value(Role.CUSTOMER.name()));
+                .andExpect(MockMvcResultMatchers.jsonPath("$.roles").value(customerRole.getName()));
 
         Mockito.verify(userService).register(any(UserRegistrationRequestDto.class));
     }

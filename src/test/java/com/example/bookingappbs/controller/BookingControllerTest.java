@@ -23,8 +23,8 @@ import com.example.bookingappbs.dto.booking.UpdateBookingRequestDto;
 import com.example.bookingappbs.mapper.UserMapper;
 import com.example.bookingappbs.model.Booking;
 import com.example.bookingappbs.model.Booking.Status;
+import com.example.bookingappbs.model.Role;
 import com.example.bookingappbs.model.User;
-import com.example.bookingappbs.model.User.Role;
 import com.example.bookingappbs.service.accommodation.AccommodationService;
 import com.example.bookingappbs.service.booking.BookingService;
 import com.example.bookingappbs.service.notification.TelegramService;
@@ -34,6 +34,7 @@ import java.sql.Connection;
 import java.sql.SQLException;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Set;
 import javax.sql.DataSource;
 import lombok.SneakyThrows;
 import org.apache.commons.lang3.builder.EqualsBuilder;
@@ -89,6 +90,8 @@ public class BookingControllerTest {
     private BookingDto expectedBookingDto;
     private CreateBookingRequestDto createBookingRequestDto;
     private UpdateBookingRequestDto updateBookingRequestDto;
+    private Role customerRole;
+    private Role adminRole;
 
     @BeforeEach
     void beforeEach(@Autowired WebApplicationContext applicationContext,
@@ -113,20 +116,22 @@ public class BookingControllerTest {
                     new ClassPathResource("database/bookings/add-three-bookings.sql")
             );
         }
+        customerRole = new Role("CUSTOMER");
+        adminRole = new Role("ADMIN");
 
         mockUser = new User().setId(1L)
                 .setEmail("user@example.com")
                 .setPassword("password")
                 .setFirstName("John")
                 .setLastName("Smith")
-                .setRole(Role.CUSTOMER);
+                .setRoles(Set.of(customerRole));
 
         adminUser = new User()
                 .setId(999L)
                 .setEmail("admin@example.com")
                 .setFirstName("Admin")
                 .setLastName("User")
-                .setRole(Role.ADMIN);
+                .setRoles(Set.of(adminRole));
 
         createBookingRequestDto = new CreateBookingRequestDto(
                 LocalDate.now(),

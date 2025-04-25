@@ -5,11 +5,12 @@ import com.example.bookingappbs.dto.user.UpdateUserRoleRequestDto;
 import com.example.bookingappbs.dto.user.UserRegistrationRequestDto;
 import com.example.bookingappbs.dto.user.UserResponseDto;
 import com.example.bookingappbs.exception.EntityNotFoundException;
-import com.example.bookingappbs.exception.RegistrationException;
 import com.example.bookingappbs.mapper.UserMapper;
+import com.example.bookingappbs.model.Role;
 import com.example.bookingappbs.model.User;
-import com.example.bookingappbs.model.User.Role;
+import com.example.bookingappbs.repository.RoleRepository;
 import com.example.bookingappbs.repository.UserRepository;
+import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -25,19 +26,18 @@ public class UserServiceImpl implements UserService {
     private final UserRepository userRepository;
     private final UserMapper userMapper;
     private final PasswordEncoder passwordEncoder;
+    private final RoleRepository roleRepository;
 
     @Override
     @Transactional
     public UserResponseDto register(UserRegistrationRequestDto requestDto) {
         logger.info("Processing registration for user with email: {}", requestDto.email());
-        if (userRepository.existsByEmail(requestDto.email())) {
-            throw new RegistrationException(
-                    "User with email: " + requestDto.email() + " already exist");
-        }
 
-        User user = userMapper.toModel(requestDto);
+        Role role = roleRepository.findByName("CUSTOMER").orElseThrow(() ->
+                new EntityNotFoundException("Role 'CUSTOMER' not found in database"));
+        User user = userMapper.toModel(requestDto, passwordEncoder);
         user.setPassword(passwordEncoder.encode(requestDto.password()));
-        user.setRole(Role.CUSTOMER);
+        user.setRoles(Set.of(role));
 
         User savedUser = userRepository.save(user);
         UserResponseDto dto = userMapper.toDto(savedUser);
@@ -49,11 +49,16 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional
     public UserResponseDto updateUserRole(Long id, UpdateUserRoleRequestDto requestDto) {
-        logger.info("Updating role for user ID: {} to: {}", id, requestDto.role());
-        User user = userRepository.findById(id)
+        logger.info("Updating role for user ID: {} to role ID: {}", id, requestDto.roleId());
+        User user = userRepository.findByIdWithRoles(id)
                 .orElseThrow(() -> new EntityNotFoundException("Can't find user by id: " + id));
+        Role role = roleRepository.findById(requestDto.roleId())
+                .orElseThrow(() -> new EntityNotFoundException("Role not found with id: "
+                        + requestDto.roleId()));
 
-        user.setRole(requestDto.role());
+        user.getRoles().clear();
+        user.getRoles().add(role);
+
         User savedUser = userRepository.save(user);
         UserResponseDto dto = userMapper.toDto(savedUser);
 
@@ -64,7 +69,7 @@ public class UserServiceImpl implements UserService {
     @Override
     public UserResponseDto getUser(User user) {
         logger.info("Retrieving user information for user ID: {}", user.getId());
-        User userFromDB = userRepository.findById(user.getId())
+        User userFromDB = userRepository.findByIdWithRoles(user.getId())
                 .orElseThrow(() ->
                         new EntityNotFoundException("Can't find user by id: " + user.getId()));
         UserResponseDto dto = userMapper.toDto(userFromDB);

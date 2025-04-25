@@ -15,13 +15,16 @@ import com.example.bookingappbs.dto.user.UpdateCurrentUserRequestDto;
 import com.example.bookingappbs.dto.user.UpdateUserRoleRequestDto;
 import com.example.bookingappbs.dto.user.UserRegistrationRequestDto;
 import com.example.bookingappbs.dto.user.UserResponseDto;
-import com.example.bookingappbs.exception.RegistrationException;
+import com.example.bookingappbs.exception.EntityNotFoundException;
 import com.example.bookingappbs.mapper.UserMapper;
+import com.example.bookingappbs.model.Role;
 import com.example.bookingappbs.model.User;
-import com.example.bookingappbs.model.User.Role;
+import com.example.bookingappbs.repository.RoleRepository;
 import com.example.bookingappbs.repository.UserRepository;
 import com.example.bookingappbs.service.user.UserServiceImpl;
+import java.util.HashSet;
 import java.util.Optional;
+import java.util.Set;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -38,6 +41,8 @@ public class UserServiceTest {
     @Mock
     private UserRepository userRepository;
     @Mock
+    private RoleRepository roleRepository;
+    @Mock
     private UserMapper userMapper;
     @Mock
     private PasswordEncoder passwordEncoder;
@@ -51,6 +56,8 @@ public class UserServiceTest {
     private User updatedUserWithRole;
     private User currentUser;
     private UpdateCurrentUserRequestDto updateCurrentUserRequestDto;
+    private Role customerRole;
+    private Role adminRole;
 
     @BeforeEach
     void setUp() {
@@ -61,38 +68,40 @@ public class UserServiceTest {
                 "John",
                 "Doe"
         );
+        customerRole = new Role("CUSTOMER");
+        adminRole = new Role("ADMIN");
         userToSave = new User()
                 .setEmail(registrationRequestDto.email())
                 .setFirstName(registrationRequestDto.firstName())
                 .setLastName(registrationRequestDto.lastName())
-                .setRole(Role.CUSTOMER);
+                .setRoles(new HashSet<>(Set.of(customerRole)));
         savedUser = new User()
                 .setId(1L)
                 .setEmail(registrationRequestDto.email())
                 .setFirstName(registrationRequestDto.firstName())
                 .setLastName(registrationRequestDto.lastName())
                 .setPassword("encodedPassword")
-                .setRole(Role.CUSTOMER);
+                .setRoles(new HashSet<>(Set.of(customerRole)));
         expectedUserResponseDto = new UserResponseDto(
                 savedUser.getId(),
                 savedUser.getEmail(),
                 savedUser.getFirstName(),
                 savedUser.getLastName(),
-                savedUser.getRole().toString()
+                savedUser.getRoles().stream().map(Object::toString).toList()
         );
-        updateUserRoleRequestDto = new UpdateUserRoleRequestDto(Role.ADMIN);
+        updateUserRoleRequestDto = new UpdateUserRoleRequestDto(1L);
         existingUser = new User()
                 .setId(1L)
                 .setEmail("test@example.com")
                 .setFirstName("John")
                 .setLastName("Doe")
-                .setRole(Role.CUSTOMER);
+                .setRoles(new HashSet<>(Set.of(customerRole)));
         updatedUserWithRole = new User()
                 .setId(1L)
                 .setEmail("test@example.com")
                 .setFirstName("John")
                 .setLastName("Doe")
-                .setRole(Role.ADMIN);
+                .setRoles(new HashSet<>(Set.of(adminRole)));
         currentUser = new User().setId(1L).setEmail("old@example.com");
         updateCurrentUserRequestDto = new UpdateCurrentUserRequestDto(
                 "Jane",
@@ -106,8 +115,8 @@ public class UserServiceTest {
     @DisplayName("Verify register() method works and saves new user")
     public void register_ValidRequestDto_ReturnsUserResponseDto() {
         // Given
-        when(userRepository.existsByEmail(registrationRequestDto.email())).thenReturn(false);
-        when(userMapper.toModel(registrationRequestDto)).thenReturn(userToSave);
+        when(roleRepository.findByName("CUSTOMER")).thenReturn(Optional.of(customerRole));
+        when(userMapper.toModel(registrationRequestDto, passwordEncoder)).thenReturn(userToSave);
         when(passwordEncoder.encode(registrationRequestDto.password()))
                 .thenReturn("encodedPassword");
         when(userRepository.save(userToSave)).thenReturn(savedUser);
@@ -118,8 +127,8 @@ public class UserServiceTest {
 
         // Then
         assertThat(actualDto).isEqualTo(expectedUserResponseDto);
-        verify(userRepository, times(1)).existsByEmail(registrationRequestDto.email());
-        verify(userMapper, times(1)).toModel(registrationRequestDto);
+        verify(roleRepository, times(1)).findByName("CUSTOMER");
+        verify(userMapper, times(1)).toModel(registrationRequestDto, passwordEncoder);
         verify(passwordEncoder, times(1)).encode(registrationRequestDto.password());
         verify(userRepository, times(1)).save(userToSave);
         verify(userMapper, times(1)).toDto(savedUser);
@@ -127,40 +136,42 @@ public class UserServiceTest {
     }
 
     @Test
-    @DisplayName("register should throw RegistrationException if user with email already exists")
-    void register_ExistingEmail_ThrowsRegistrationException() {
+    @DisplayName("register should throw EntityNotFoundException if 'CUSTOMER' role is not found")
+    void register_CustomerRoleNotFound_ThrowsEntityNotFoundException() {
         // When
-        when(userRepository.existsByEmail(registrationRequestDto.email())).thenReturn(true);
+        when(roleRepository.findByName("CUSTOMER")).thenReturn(Optional.empty());
 
-        RegistrationException exception = assertThrows(RegistrationException.class,
+        EntityNotFoundException exception = assertThrows(EntityNotFoundException.class,
                 () -> userService.register(registrationRequestDto));
 
         // Then
-        assertEquals("User with email: test@example.com already exist", exception.getMessage());
-        verify(userRepository).existsByEmail(registrationRequestDto.email());
-        verifyNoInteractions(userMapper, passwordEncoder);
+        assertEquals("Role 'CUSTOMER' not found in database", exception.getMessage());
+        verify(roleRepository).findByName("CUSTOMER");
+        verifyNoInteractions(userRepository, userMapper, passwordEncoder);
     }
 
     @Test
     @DisplayName("Verify updateUserRole() method works and updates user role")
     public void updateUserRole_ValidIdAndRequestDto_ReturnsUpdatedUserResponseDto() {
         // Given
-        when(userRepository.findById(anyLong())).thenReturn(Optional.of(existingUser));
+        when(userRepository.findByIdWithRoles(anyLong())).thenReturn(Optional.of(existingUser));
+        when(roleRepository.findById(1L)).thenReturn(Optional.of(adminRole));
         when(userRepository.save(any(User.class))).thenReturn(updatedUserWithRole);
         when(userMapper.toDto(any(User.class))).thenReturn(new UserResponseDto(
                 updatedUserWithRole.getId(),
                 updatedUserWithRole.getEmail(),
                 updatedUserWithRole.getFirstName(),
                 updatedUserWithRole.getLastName(),
-                updatedUserWithRole.getRole().toString()
+                updatedUserWithRole.getRoles().stream().map(Role::getName).toList()
         ));
 
         // When
         UserResponseDto actualDto = userService.updateUserRole(1L, updateUserRoleRequestDto);
 
         // Then
-        assertThat(actualDto.role()).isEqualTo(Role.ADMIN.toString());
-        verify(userRepository, times(1)).findById(1L);
+        assertThat(actualDto.roles()).contains(adminRole.getName());
+        verify(userRepository, times(1)).findByIdWithRoles(1L);
+        verify(roleRepository, times(1)).findById(1L);
         verify(userRepository, times(1)).save(existingUser);
         verify(userMapper, times(1)).toDto(updatedUserWithRole);
         verifyNoMoreInteractions(userRepository, userMapper);
@@ -170,13 +181,14 @@ public class UserServiceTest {
     @DisplayName("Verify getUser() method works and returns UserResponseDto")
     public void getUser_ValidUser_ReturnsUserResponseDto() {
         // Given
-        when(userRepository.findById(currentUser.getId())).thenReturn(Optional.of(existingUser));
+        when(userRepository.findByIdWithRoles(currentUser.getId()))
+                .thenReturn(Optional.of(existingUser));
         when(userMapper.toDto(existingUser)).thenReturn(new UserResponseDto(
                 existingUser.getId(),
                 existingUser.getEmail(),
                 existingUser.getFirstName(),
                 existingUser.getLastName(),
-                existingUser.getRole().toString()
+                existingUser.getRoles().stream().map(Object::toString).toList()
         ));
 
         // When
@@ -184,7 +196,7 @@ public class UserServiceTest {
 
         // Then
         assertThat(actualDto).isEqualTo(expectedUserResponseDto);
-        verify(userRepository, times(1)).findById(currentUser.getId());
+        verify(userRepository, times(1)).findByIdWithRoles(currentUser.getId());
         verify(userMapper, times(1)).toDto(existingUser);
         verifyNoMoreInteractions(userRepository, userMapper);
     }
@@ -199,13 +211,13 @@ public class UserServiceTest {
                 .setFirstName(updateCurrentUserRequestDto.firstName())
                 .setLastName(updateCurrentUserRequestDto.lastName())
                 .setPassword("newEncodedPassword")
-                .setRole(Role.CUSTOMER);
+                .setRoles(Set.of(customerRole));
         UserResponseDto expectedUpdatedDto = new UserResponseDto(
                 updatedLocalUser.getId(),
                 updatedLocalUser.getEmail(),
                 updatedLocalUser.getFirstName(),
                 updatedLocalUser.getLastName(),
-                updatedLocalUser.getRole().toString()
+                updatedLocalUser.getRoles().stream().map(Object::toString).toList()
         );
 
         when(userRepository.findById(currentUser.getId())).thenReturn(Optional.of(existingUser));

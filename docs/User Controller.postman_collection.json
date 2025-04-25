@@ -10,13 +10,20 @@
 			"name": "Update user role",
 			"request": {
 				"auth": {
-					"type": "noauth"
+					"type": "bearer",
+					"bearer": [
+						{
+							"key": "token",
+							"value": "eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiJhZG1pbkBleGFtcGxlLmNvbSIsImlhdCI6MTc0NTU5MjI0MSwiZXhwIjoxNzQ1NTk1MjQxfQ.HpAvYK1Q8mi4XtGylUHoLyiIgNVZFYa6wYVO17QV5KEmbJPf6nW7mQqPwvZY2mXV",
+							"type": "string"
+						}
+					]
 				},
 				"method": "PUT",
 				"header": [],
 				"body": {
 					"mode": "raw",
-					"raw": "{\r\n    \"role\":\"ADMIN\"\r\n}",
+					"raw": "{\r\n    \"roleId\":1\r\n}",
 					"options": {
 						"raw": {
 							"language": "json"

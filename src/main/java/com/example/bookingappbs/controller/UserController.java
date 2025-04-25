@@ -39,11 +39,12 @@ public class UserController {
             @PathVariable @Positive Long id,
             @RequestBody @Valid UpdateUserRoleRequestDto requestDto
     ) {
-        logger.info("Processing request to update role for user ID: {}. New role: {}",
-                id, requestDto.role());
+        logger.info("Processing request to update role for user ID: {}. New role ID: {}",
+                id, requestDto.roleId());
         UserResponseDto updatedUser = userService.updateUserRole(id, requestDto);
 
-        logger.info("Role for user ID {} successfully updated to: {}", id, updatedUser.role());
+        logger.info("Role for user ID {} successfully updated. New role ID: {}",
+                id, requestDto.roleId());
         return updatedUser;
     }
 
