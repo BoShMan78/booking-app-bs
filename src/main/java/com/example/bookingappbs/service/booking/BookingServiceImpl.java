@@ -26,6 +26,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -291,12 +292,14 @@ public class BookingServiceImpl implements BookingService {
         return accommodationMapper.toDto(accommodation);
     }
 
-    private void cacheBooking(Long id, BookingDto dto) {
+    @Async
+    protected void cacheBooking(Long id, BookingDto dto) {
         redisService.deletePattern(BOOKINGS_PAGE_KEY_PREFIX + "*");
         redisService.save(BOOKING_KEY_PREFIX + id, dto);
     }
 
-    private void sendBookingNotification(
+    @Async
+    protected void sendBookingNotification(
             String title,
             Booking booking,
             Accommodation accommodation

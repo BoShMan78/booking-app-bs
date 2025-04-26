@@ -15,6 +15,7 @@ import lombok.RequiredArgsConstructor;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.data.domain.Pageable;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -125,15 +126,18 @@ public class AccommodationServiceImpl implements AccommodationService {
         logger.info("Accommodation with ID {} deleted successfully.", id);
     }
 
-    private void clearAccommodationCache() {
+    @Async
+    protected void clearAccommodationCache() {
         redisService.deletePattern(ACCOMMODATIONS_PAGE_KEY_PREFIX + "*");
     }
 
-    private void saveToCache(Long id, AccommodationDto dto) {
+    @Async
+    protected void saveToCache(Long id, AccommodationDto dto) {
         redisService.save(ACCOMMODATION_KEY_PREFIX + id, dto);
     }
 
-    private void sendAccommodationNotification(String title, Accommodation accommodation) {
+    @Async
+    protected void sendAccommodationNotification(String title, Accommodation accommodation) {
         String location = String.format("%s %s, %s, %s",
                 accommodation.getLocation().getStreet(),
                 accommodation.getLocation().getHouse(),

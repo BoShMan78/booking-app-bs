@@ -22,6 +22,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Pageable;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -155,7 +156,8 @@ public class PaymentProcessingServiceImpl implements PaymentProcessingService {
         return "payment_success";
     }
 
-    private void sendPaymentSuccessNotification(
+    @Async
+    protected void sendPaymentSuccessNotification(
             PaymentDto paymentDto,
             BookingDto bookingDto,
             AccommodationDto accommodationDto,
