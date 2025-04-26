@@ -234,7 +234,7 @@ public class UserServiceTest {
         verify(userMapper, times(1))
                 .updateUserFromDto(updateCurrentUserRequestDto, existingUser, passwordEncoder);
         verify(userRepository, times(1)).save(existingUser);
-        verify(userMapper, times(1)).toDto(updatedLocalUser); ;
+        verify(userMapper, times(1)).toDto(updatedLocalUser);
         verifyNoMoreInteractions(userRepository, userMapper);
     }
 }

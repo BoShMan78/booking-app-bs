@@ -20,16 +20,12 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.example.bookingappbs.dto.booking.BookingDto;
 import com.example.bookingappbs.dto.booking.CreateBookingRequestDto;
 import com.example.bookingappbs.dto.booking.UpdateBookingRequestDto;
-import com.example.bookingappbs.mapper.UserMapper;
 import com.example.bookingappbs.model.Booking;
 import com.example.bookingappbs.model.Booking.Status;
 import com.example.bookingappbs.model.Role;
 import com.example.bookingappbs.model.User;
-import com.example.bookingappbs.service.accommodation.AccommodationService;
 import com.example.bookingappbs.service.booking.BookingService;
-import com.example.bookingappbs.service.notification.TelegramService;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import jakarta.servlet.Filter;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.time.LocalDate;
@@ -63,7 +59,6 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
-import org.telegram.telegrambots.meta.TelegramBotsApi;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @DirtiesContext(classMode = ClassMode.AFTER_EACH_TEST_METHOD)
@@ -72,18 +67,8 @@ public class BookingControllerTest {
     protected static MockMvc mockMvc;
     @Autowired
     private ObjectMapper objectMapper;
-    @Autowired
-    private Filter springSecurityFilterChain;
-    @MockBean
-    private TelegramBotsApi telegramBotsApi;
-    @MockBean
-    private TelegramService telegramService;
     @MockBean
     private BookingService bookingService;
-    @MockBean
-    private AccommodationService accommodationService;
-    @Autowired
-    private UserMapper userMapper;
 
     private User mockUser;
     private User adminUser;

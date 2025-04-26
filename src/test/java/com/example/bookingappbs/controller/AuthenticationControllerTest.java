@@ -7,11 +7,8 @@ import com.example.bookingappbs.dto.user.UserLoginRequestDto;
 import com.example.bookingappbs.dto.user.UserLoginResponseDto;
 import com.example.bookingappbs.dto.user.UserRegistrationRequestDto;
 import com.example.bookingappbs.dto.user.UserResponseDto;
-import com.example.bookingappbs.exception.RegistrationException;
 import com.example.bookingappbs.model.Role;
 import com.example.bookingappbs.security.AuthenticationService;
-import com.example.bookingappbs.service.accommodation.AccommodationService;
-import com.example.bookingappbs.service.booking.BookingService;
 import com.example.bookingappbs.service.user.UserService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.List;
@@ -41,17 +38,11 @@ public class AuthenticationControllerTest {
     private UserService userService;
     @MockBean
     private AuthenticationService authenticationService;
-    @MockBean
-    private BookingService bookingService;
-    @MockBean
-    private AccommodationService accommodationService;
 
     private UserRegistrationRequestDto registrationDto;
     private UserResponseDto registrationResponseDto;
     private UserLoginRequestDto loginDto;
     private UserLoginResponseDto loginResponseDto;
-    private RegistrationException registrationException;
-    private RuntimeException loginException;
     private Role customerRole;
 
     @BeforeEach

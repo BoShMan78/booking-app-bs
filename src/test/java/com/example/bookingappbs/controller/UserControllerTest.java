@@ -10,13 +10,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.example.bookingappbs.dto.user.UpdateCurrentUserRequestDto;
 import com.example.bookingappbs.dto.user.UpdateUserRoleRequestDto;
-import com.example.bookingappbs.dto.user.UserResponseDto;
 import com.example.bookingappbs.model.Role;
 import com.example.bookingappbs.model.User;
-import com.example.bookingappbs.service.accommodation.AccommodationService;
-import com.example.bookingappbs.service.booking.BookingService;
-import com.example.bookingappbs.service.notification.TelegramService;
-import com.example.bookingappbs.service.user.UserService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.sql.Connection;
 import java.sql.SQLException;
@@ -29,7 +24,6 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.datasource.init.ScriptUtils;
@@ -43,7 +37,6 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
-import org.telegram.telegrambots.meta.TelegramBotsApi;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @AutoConfigureMockMvc
@@ -51,26 +44,13 @@ import org.telegram.telegrambots.meta.TelegramBotsApi;
 public class UserControllerTest {
     protected MockMvc mockMvc;
 
-    @MockBean
-    private TelegramBotsApi telegramBotsApi;
-    @MockBean
-    private TelegramService telegramService;
-    @MockBean
-    private BookingService bookingService;
-    @MockBean
-    private AccommodationService accommodationService;
-
-    @Autowired
-    private UserService userService;
     @Autowired
     private ObjectMapper objectMapper;
 
     private Long userId;
     private String email;
     private User mockUser;
-    private UserResponseDto userResponseDto;
     private UpdateUserRoleRequestDto updateUserRoleRequestDto;
-    private UpdateCurrentUserRequestDto updateCurrentUserRequestDto;
     private Role customerRole;
     private Role adminRole;
 
@@ -101,22 +81,7 @@ public class UserControllerTest {
         mockUser.setEmail(email);
         mockUser.setRoles(Set.of(customerRole));
 
-        userResponseDto = new UserResponseDto(
-                userId,
-                email,
-                "Test",
-                "User",
-                List.of(customerRole.getName())
-        );
-
         updateUserRoleRequestDto = new UpdateUserRoleRequestDto(1L);
-
-        updateCurrentUserRequestDto = new UpdateCurrentUserRequestDto(
-                "Updated",
-                "LastName",
-                "updated@example.com",
-                "Password#123"
-        );
 
         Authentication authentication = new UsernamePasswordAuthenticationToken(
                 mockUser, null, mockUser.getAuthorities());

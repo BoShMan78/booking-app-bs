@@ -80,7 +80,6 @@ public class BookingServiceTest {
     private BookingDto bookingDto;
     private Long userId;
     private Pageable pageable;
-    private String allBookingsCacheKey;
     private String userBookingsCacheKey;
     private Long bookingId;
     private String singleBookingCacheKey;
@@ -132,9 +131,6 @@ public class BookingServiceTest {
         );
 
         pageable = PageRequest.of(0, 10);
-        allBookingsCacheKey = "bookings::all::page:" + pageable.getPageNumber()
-                + "::size:" + pageable.getPageSize()
-                + "::sort:" + pageable.getSort();
         userBookingsCacheKey = "bookings::user::" + userId
                 + "::page::" + pageable.getPageNumber()
                 + "::size::" + pageable.getPageSize()
