@@ -36,7 +36,6 @@ import org.springframework.transaction.annotation.Transactional;
 public class BookingServiceImpl implements BookingService {
     private static final Logger logger = LogManager.getLogger(BookingServiceImpl.class);
     private static final String BOOKINGS_PAGE_KEY_PREFIX = "bookings";
-    private static final String BOOKING_KEY_PREFIX = "booking::";
 
     private final BookingRepository bookingRepository;
     private final BookingMapper bookingMapper;
@@ -69,10 +68,10 @@ public class BookingServiceImpl implements BookingService {
         booking.setAccommodation(accommodation);
 
         Booking savedBooking = bookingRepository.save(booking);
+
+        clearBookingsCache();
+
         BookingDto bookingDto = bookingMapper.toDto(savedBooking);
-
-        cacheBooking(savedBooking.getId(), bookingDto);
-
         sendBookingNotification("New booking created", savedBooking, accommodation);
 
         logger.info("Booking saved successfully with ID: {}", savedBooking.getId());
@@ -99,7 +98,7 @@ public class BookingServiceImpl implements BookingService {
                 .append("::sort::").append(pageable.getSort());
         String key = cacheKeyBuilder.toString();
 
-        List<BookingDto> cachedBookings = redisService.findAll(key, BookingDto.class);
+        List<BookingDto> cachedBookings = findAllBookingsCache(key);
         if (cachedBookings != null && !cachedBookings.isEmpty()) {
             logger.info("Retrieved bookings from cache with key: {}, count: {}",
                     key, cachedBookings.size());
@@ -112,7 +111,7 @@ public class BookingServiceImpl implements BookingService {
                 .map(bookingMapper::toDto)
                 .toList();
 
-        redisService.save(key, bookingDtos);
+        saveToCacheDtos(key, bookingDtos);
 
         logger.info("Retrieved bookings from database, count: {}, and saved to cache with key: {}",
                 bookingDtos.size(), key);
@@ -127,7 +126,7 @@ public class BookingServiceImpl implements BookingService {
                 + "::page::" + pageable.getPageNumber()
                 + "::size::" + pageable.getPageSize()
                 + "::sort::" + pageable.getSort();
-        List<BookingDto> cachedBookings = redisService.findAll(key, BookingDto.class);
+        List<BookingDto> cachedBookings = findAllBookingsCache(key);
         if (cachedBookings != null && !cachedBookings.isEmpty()) {
             logger.info("Retrieved user bookings from cache with key: {}, count: {}",
                     key, cachedBookings.size());
@@ -140,7 +139,7 @@ public class BookingServiceImpl implements BookingService {
                 .map(bookingMapper::toDto)
                 .toList();
 
-        redisService.save(key, bookingDtos);
+        saveToCacheDtos(key, bookingDtos);
 
         logger.info("Retrieved user bookings from database, count: {}, "
                 + "and saved to cache with key: {}", bookingDtos.size(), key);
@@ -151,20 +150,13 @@ public class BookingServiceImpl implements BookingService {
     public BookingDto getBookingById(User user, Long id) {
         logger.info("Processing request to get booking with ID: {} for user ID: {}",
                 id, user.getId());
-        String key = BOOKING_KEY_PREFIX + id;
-        BookingDto bookingDto = redisService.find(key, BookingDto.class);
-        if (bookingDto == null) {
-            logger.info("Booking with ID {} not found in cache. Fetching from database.", id);
-            Booking existedBooking = bookingRepository.findById(id)
-                    .orElseThrow(() ->
-                            new EntityNotFoundException("Cannot find Booking by id: "));
-            bookingDto = bookingMapper.toDto(existedBooking);
 
-            redisService.save(key, bookingDto);
-            logger.info("Booking with ID {} fetched from database and saved to cache.", id);
-        } else {
-            logger.info("Booking with ID {} found in cache.", id);
-        }
+        Booking existedBooking = bookingRepository.findById(id)
+                .orElseThrow(() ->
+                        new EntityNotFoundException("Cannot find Booking by id: "));
+        BookingDto bookingDto = bookingMapper.toDto(existedBooking);
+
+        logger.info("Booking with ID {} fetched from database and saved to cache.", id);
         return bookingDto;
     }
 
@@ -214,7 +206,7 @@ public class BookingServiceImpl implements BookingService {
         Booking savedBooking = bookingRepository.save(existedBooking);
         BookingDto bookingDto = bookingMapper.toDto(savedBooking);
 
-        cacheBooking(id, bookingDto);
+        clearBookingsCache();
 
         logger.info("Booking with ID {} updated successfully.", id);
         return bookingDto;
@@ -238,7 +230,7 @@ public class BookingServiceImpl implements BookingService {
         bookingRepository.save(booking);
         bookingRepository.delete(booking);
 
-        redisService.deletePattern(BOOKINGS_PAGE_KEY_PREFIX + "*");
+        clearBookingsCache();
 
         sendBookingNotification("Booking canceled", booking, booking.getAccommodation());
         logger.info("Booking with ID {} successfully canceled.", id);
@@ -273,11 +265,10 @@ public class BookingServiceImpl implements BookingService {
                         booking.getAccommodation()
                 );
 
-                redisService.delete(BOOKING_KEY_PREFIX + booking.getId());
                 logger.info("Booking ID {} expired and processed.", booking.getId());
             }
         }
-        redisService.deletePattern(BOOKINGS_PAGE_KEY_PREFIX + "*");
+        clearBookingsCache();
         logger.info("Scheduled task: Finished checking for expired bookings.");
     }
 
@@ -293,9 +284,18 @@ public class BookingServiceImpl implements BookingService {
     }
 
     @Async
-    protected void cacheBooking(Long id, BookingDto dto) {
+    protected void clearBookingsCache() {
         redisService.deletePattern(BOOKINGS_PAGE_KEY_PREFIX + "*");
-        redisService.save(BOOKING_KEY_PREFIX + id, dto);
+    }
+
+    @Async
+    protected List<BookingDto> findAllBookingsCache(String key) {
+        return redisService.findAll(key, BookingDto.class);
+    }
+
+    @Async
+    protected void saveToCacheDtos(String key, List<BookingDto> bookingDtos) {
+        redisService.save(key, bookingDtos);
     }
 
     @Async

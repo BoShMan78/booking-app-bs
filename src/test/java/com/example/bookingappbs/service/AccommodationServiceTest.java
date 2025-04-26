@@ -1,6 +1,8 @@
 package com.example.bookingappbs.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.times;
@@ -32,7 +34,6 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.redis.core.RedisTemplate;
 
 @ExtendWith(MockitoExtension.class)
 public class AccommodationServiceTest {
@@ -52,12 +53,12 @@ public class AccommodationServiceTest {
     @Mock
     private RedisService redisService;
 
-    @Mock
-    private RedisTemplate<String, Object> redisTemplate;
-
     private Address address;
     private AddressDto addressDto;
     private CreateAddressRequestDto createAddressRequestDto;
+    private Long accommodationId;
+    private Accommodation accommodation;
+    private AccommodationDto accommodationDto;
 
     @BeforeEach
     void setUp() {
@@ -83,6 +84,26 @@ public class AccommodationServiceTest {
                 address.getStreet(),
                 address.getHouse(),
                 address.getApartment()
+        );
+
+        accommodationId = 1L;
+        accommodation = new Accommodation()
+                .setId(accommodationId)
+                .setType(Type.APARTMENT)
+                .setLocation(address)
+                .setSize("Double")
+                .setAmenities(List.of("Wifi", "Breakfast"))
+                .setDailyRate(BigDecimal.valueOf(100.00))
+                .setAvailability(10);
+
+        accommodationDto = new AccommodationDto(
+                accommodationId,
+                accommodation.getType(),
+                addressDto,
+                accommodation.getSize(),
+                accommodation.getAmenities(),
+                accommodation.getDailyRate(),
+                accommodation.getAvailability()
         );
     }
 
@@ -125,7 +146,6 @@ public class AccommodationServiceTest {
         when(accommodationRepository.save(accommodationToSave)).thenReturn(savedAccommodation);
         when(accommodationMapper.toDto(savedAccommodation)).thenReturn(expectedDto);
         doNothing().when(redisService).deletePattern("accommodations::all::*");
-        doNothing().when(redisService).save("accommodation::1", expectedDto);
         doNothing().when(notificationService).sendNotification(anyString());
 
         // When
@@ -137,7 +157,6 @@ public class AccommodationServiceTest {
         verify(accommodationRepository, times(1)).save(accommodationToSave);
         verify(accommodationMapper, times(1)).toDto(savedAccommodation);
         verify(redisService, times(1)).deletePattern("accommodations::all::*");
-        verify(redisService, times(1)).save("accommodation::1", expectedDto);
         verify(notificationService, times(1)).sendNotification(anyString());
         verifyNoMoreInteractions(accommodationRepository, accommodationMapper,
                 redisService, notificationService);
@@ -171,29 +190,19 @@ public class AccommodationServiceTest {
     }
 
     @Test
-    @DisplayName("Verify findAccommodationById() method works and returns cached data")
-    public void findAccommodationById_ExistingCache_ReturnCachedAccommodation() {
-        // Given
-        Long accommodationId = 1L;
-        String key = "accommodation::" + accommodationId;
-        AccommodationDto cachedDto = new AccommodationDto(
-                accommodationId,
-                Type.APARTMENT,
-                null,
-                "2 bedroom",
-                List.of(),
-                BigDecimal.TEN,
-                1
-        );
-        when(redisService.find(key, AccommodationDto.class)).thenReturn(cachedDto);
-
+    void findAccommodationById_existingId_returnsAccommodationDto() {
         // When
+        when(accommodationRepository.findById(accommodationId))
+                .thenReturn(Optional.of(accommodation));
+        when(accommodationMapper.toDto(accommodation)).thenReturn(accommodationDto);
+
         AccommodationDto result = accommodationService.findAccommodationById(accommodationId);
 
         // Then
-        assertThat(result).isEqualTo(cachedDto);
-        verify(redisService, times(1)).find(key, AccommodationDto.class);
-        verifyNoMoreInteractions(accommodationRepository, accommodationMapper, redisService);
+        assertNotNull(result);
+        assertEquals(accommodationDto, result);
+        verify(accommodationRepository, times(1)).findById(accommodationId);
+        verify(accommodationMapper, times(1)).toDto(accommodation);
     }
 
     @Test
@@ -239,7 +248,6 @@ public class AccommodationServiceTest {
                 .thenReturn(savedAccommodation);
         when(accommodationMapper.toDto(savedAccommodation)).thenReturn(expectedDto);
         doNothing().when(redisService).deletePattern("accommodations::all::*");
-        doNothing().when(redisService).save("accommodation::1", expectedDto);
 
         // When
         AccommodationDto actualDto = accommodationService
@@ -253,7 +261,6 @@ public class AccommodationServiceTest {
                 .updateAccommodationFromDto(requestDto, existingAccommodation);
         verify(accommodationMapper, times(1)).toDto(savedAccommodation);
         verify(redisService, times(1)).deletePattern("accommodations::all::*");
-        verify(redisService, times(1)).save("accommodation::1", expectedDto);
         verifyNoMoreInteractions(accommodationRepository, accommodationMapper, redisService);
         verify(accommodationMapper, times(1))
                 .updateAccommodationFromDto(requestDto, existingAccommodation);
@@ -273,7 +280,6 @@ public class AccommodationServiceTest {
                 .thenReturn(accommodationToDelete);
         doNothing().when(accommodationRepository).deleteById(accommodationId);
         doNothing().when(redisService).deletePattern("accommodations::all::*");
-        doNothing().when(redisService).delete("accommodation::1");
         doNothing().when(notificationService).sendNotification(anyString());
 
         // When
@@ -281,7 +287,6 @@ public class AccommodationServiceTest {
 
         // Then
         verify(redisService, times(1)).deletePattern("accommodations::all::*");
-        verify(redisService, times(1)).delete("accommodation::1");
         verify(accommodationRepository, times(1)).getAccommodationById(accommodationId);
         verify(accommodationRepository, times(1)).deleteById(accommodationId);
         verify(notificationService, times(1)).sendNotification(anyString());

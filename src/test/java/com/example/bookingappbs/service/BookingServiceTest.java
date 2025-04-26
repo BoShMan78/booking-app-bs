@@ -5,7 +5,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -82,7 +81,6 @@ public class BookingServiceTest {
     private Pageable pageable;
     private String userBookingsCacheKey;
     private Long bookingId;
-    private String singleBookingCacheKey;
     private UpdateBookingRequestDto updateBookingRequestDto;
     private User admin;
     private Role customerRole;
@@ -137,7 +135,6 @@ public class BookingServiceTest {
                 + "::sort::" + pageable.getSort();
 
         bookingId = 1L;
-        singleBookingCacheKey = "booking::" + bookingId;
 
         updateBookingRequestDto = new UpdateBookingRequestDto(
                 null,
@@ -173,8 +170,6 @@ public class BookingServiceTest {
         verify(bookingRepository, times(1)).save(any(Booking.class));
         verify(bookingMapper, times(1)).toDto(booking);
         verify(redisService, times(1)).deletePattern("bookings*");
-        verify(redisService, times(1))
-                .save(eq("booking::" + booking.getId()), eq(bookingDto));
         verify(notificationService, times(1)).sendNotification(anyString());
 
         verifyNoMoreInteractions(bookingRepository, bookingMapper, paymentService, redisService,
@@ -254,7 +249,6 @@ public class BookingServiceTest {
     @DisplayName("Verify getBookingById() method works and fetches from DB and caches")
     public void getBookingById_NoCache_FetchFromDbAndCache() {
         // Given
-        when(redisService.find(singleBookingCacheKey, BookingDto.class)).thenReturn(null);
         when(bookingRepository.findById(bookingId)).thenReturn(Optional.of(booking));
         when(bookingMapper.toDto(booking)).thenReturn(bookingDto);
 
@@ -263,10 +257,8 @@ public class BookingServiceTest {
 
         // Then
         assertThat(result).isEqualTo(bookingDto);
-        verify(redisService, times(1)).find(singleBookingCacheKey, BookingDto.class);
         verify(bookingRepository, times(1)).findById(bookingId);
         verify(bookingMapper, times(1)).toDto(booking);
-        verify(redisService, times(1)).save(singleBookingCacheKey, bookingDto);
         verifyNoMoreInteractions(bookingRepository, bookingMapper, redisService);
     }
 
@@ -296,8 +288,6 @@ public class BookingServiceTest {
         verify(bookingRepository, times(1)).save(booking);
         verify(bookingMapper, times(1)).toDto(booking);
         verify(redisService, times(1)).deletePattern("bookings*");
-        verify(redisService, times(1))
-                .save(eq("booking::" + bookingId), eq(bookingDto));
         verifyNoMoreInteractions(bookingMapper, redisService);
     }
 

@@ -23,7 +23,6 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class AccommodationServiceImpl implements AccommodationService {
     private static final Logger logger = LogManager.getLogger(AccommodationServiceImpl.class);
-    private static final String ACCOMMODATION_KEY_PREFIX = "accommodation::";
     private static final String ACCOMMODATIONS_PAGE_KEY_PREFIX = "accommodations::all::";
 
     private final AccommodationRepository accommodationRepository;
@@ -37,12 +36,11 @@ public class AccommodationServiceImpl implements AccommodationService {
         logger.info("Processing request to save a new accommodation: {}", requestDto);
         Accommodation accommodation = accommodationMapper.toModel(requestDto);
         Accommodation savedAccommodation = accommodationRepository.save(accommodation);
-        AccommodationDto dto = accommodationMapper.toDto(savedAccommodation);
 
         clearAccommodationCache();
-        saveToCache(savedAccommodation.getId(), dto);
         sendAccommodationNotification("New accommodation created", savedAccommodation);
 
+        AccommodationDto dto = accommodationMapper.toDto(savedAccommodation);
         logger.info("Accommodation saved successfully with ID: {}", savedAccommodation.getId());
         return dto;
     }
@@ -54,7 +52,7 @@ public class AccommodationServiceImpl implements AccommodationService {
                 + "::size:" + pageable.getPageSize();
 
         Optional<List<AccommodationDto>> cachedDtos = Optional
-                .ofNullable(redisService.findAll(key, AccommodationDto.class))
+                .ofNullable(findAllAccommodationsCache(key))
                 .filter(list -> !list.isEmpty());
 
         return cachedDtos.orElseGet(() -> {
@@ -62,7 +60,7 @@ public class AccommodationServiceImpl implements AccommodationService {
             List<AccommodationDto> dbDtos = accommodationRepository.findAll(pageable).stream()
                     .map(accommodationMapper::toDto)
                     .toList();
-            redisService.save(key, dbDtos);
+            saveToCacheDtos(key, dbDtos);
             logger.info("Accommodations fetched from database and saved to cache. Count: {}",
                     dbDtos.size());
             return dbDtos;
@@ -72,21 +70,13 @@ public class AccommodationServiceImpl implements AccommodationService {
     @Override
     public AccommodationDto findAccommodationById(Long id) {
         logger.info("Processing request to find accommodation by ID: {}", id);
-        String key = ACCOMMODATION_KEY_PREFIX + id;
 
-        return Optional.ofNullable(redisService.find(key, AccommodationDto.class))
-                .orElseGet(() -> {
-                    logger.info("Accommodation with ID {} not found in cache. "
-                            + "Fetching from database.", id);
-                    Accommodation accommodation = accommodationRepository.findById(id).orElseThrow(
-                            () -> new EntityNotFoundException("Accommodation with id " + id
-                                    + " not found"));
-                    AccommodationDto dto = accommodationMapper.toDto(accommodation);
-                    redisService.save(key, dto);
-                    logger.info("Accommodation with ID {} fetched from database "
-                            + "and saved to cache.", id);
-                    return dto;
-                });
+        Accommodation accommodation = accommodationRepository.findById(id).orElseThrow(
+                () -> new EntityNotFoundException("Accommodation with id " + id
+                        + " not found"));
+        AccommodationDto dto = accommodationMapper.toDto(accommodation);
+        logger.info("Accommodation with ID {} fetched from database.", id);
+        return dto;
     }
 
     @Override
@@ -106,7 +96,6 @@ public class AccommodationServiceImpl implements AccommodationService {
         AccommodationDto dto = accommodationMapper.toDto(savedAccommodation);
 
         clearAccommodationCache();
-        saveToCache(id, dto);
 
         logger.info("Accommodation with ID {} updated successfully.", id);
         return dto;
@@ -117,7 +106,6 @@ public class AccommodationServiceImpl implements AccommodationService {
     public void deleteAccommodationById(Long id) {
         logger.info("Processing request to delete accommodation with ID: {}", id);
         clearAccommodationCache();
-        redisService.delete(ACCOMMODATION_KEY_PREFIX + id);
 
         Accommodation accommodation = accommodationRepository.getAccommodationById(id);
         accommodationRepository.deleteById(id);
@@ -127,13 +115,18 @@ public class AccommodationServiceImpl implements AccommodationService {
     }
 
     @Async
+    protected List<AccommodationDto> findAllAccommodationsCache(String key) {
+        return redisService.findAll(key, AccommodationDto.class);
+    }
+
+    @Async
     protected void clearAccommodationCache() {
         redisService.deletePattern(ACCOMMODATIONS_PAGE_KEY_PREFIX + "*");
     }
 
     @Async
-    protected void saveToCache(Long id, AccommodationDto dto) {
-        redisService.save(ACCOMMODATION_KEY_PREFIX + id, dto);
+    protected void saveToCacheDtos(String key, List<AccommodationDto> dbDtos) {
+        redisService.save(key, dbDtos);
     }
 
     @Async
