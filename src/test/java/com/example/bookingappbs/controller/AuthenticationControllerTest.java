@@ -7,7 +7,6 @@ import com.example.bookingappbs.dto.user.UserLoginRequestDto;
 import com.example.bookingappbs.dto.user.UserLoginResponseDto;
 import com.example.bookingappbs.dto.user.UserRegistrationRequestDto;
 import com.example.bookingappbs.dto.user.UserResponseDto;
-import com.example.bookingappbs.model.Role;
 import com.example.bookingappbs.security.AuthenticationService;
 import com.example.bookingappbs.service.user.UserService;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -43,11 +42,9 @@ public class AuthenticationControllerTest {
     private UserResponseDto registrationResponseDto;
     private UserLoginRequestDto loginDto;
     private UserLoginResponseDto loginResponseDto;
-    private Role customerRole;
 
     @BeforeEach
     void setUp() {
-        customerRole = new Role("CUSTOMER");
         registrationDto = new UserRegistrationRequestDto(
                 "test@example.com",
                 "Password#1",

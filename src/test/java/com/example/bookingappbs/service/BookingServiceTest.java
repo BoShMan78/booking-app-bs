@@ -28,6 +28,7 @@ import com.example.bookingappbs.model.User;
 import com.example.bookingappbs.repository.AccommodationRepository;
 import com.example.bookingappbs.repository.BookingRepository;
 import com.example.bookingappbs.repository.UserRepository;
+import com.example.bookingappbs.service.booking.BookingCacheKeyBuilder;
 import com.example.bookingappbs.service.booking.BookingServiceImpl;
 import com.example.bookingappbs.service.notification.NotificationService;
 import com.example.bookingappbs.service.payment.PaymentService;
@@ -69,6 +70,8 @@ public class BookingServiceTest {
     private UserRepository userRepository;
     @Mock
     private AccommodationMapper accommodationMapper;
+    @Mock
+    private BookingCacheKeyBuilder cacheKeyBuilder;
 
     private Address address;
     private Long accommodationId;
@@ -201,6 +204,8 @@ public class BookingServiceTest {
                 + "::page::" + pageable.getPageNumber()
                 + "::size::" + pageable.getPageSize()
                 + "::sort::" + pageable.getSort();
+        when(cacheKeyBuilder.buildBookingsPageKey(userId, status.toString(), pageable))
+                .thenReturn(key);
         when(redisService.findAll(key, BookingDto.class)).thenReturn(null);
         Page<Booking> bookingPage = new PageImpl<>(List.of(new Booking().setId(bookingId)));
         when(bookingRepository.findByUserIdAndStatusOptional(userId, status, pageable))
@@ -221,18 +226,22 @@ public class BookingServiceTest {
 
         // Then
         assertThat(result).isEqualTo(bookingDtos);
+        verify(cacheKeyBuilder, times(1))
+                .buildBookingsPageKey(userId, status.toString(), pageable);
         verify(redisService, times(1)).findAll(key, BookingDto.class);
         verify(bookingRepository, times(1))
                 .findByUserIdAndStatusOptional(userId, status, pageable);
         verify(bookingMapper, times(1)).toDto(any(Booking.class));
         verify(redisService, times(1)).save(key, bookingDtos);
-        verifyNoMoreInteractions(bookingRepository, bookingMapper, redisService);
+        verifyNoMoreInteractions(bookingRepository, bookingMapper, redisService, cacheKeyBuilder);
     }
 
     @Test
     @DisplayName("Verify getBookingsByUser() method works and returns cached data")
     public void getBookingsByUser_ExistingCache_ReturnCachedBookings() {
         // Given
+        when(cacheKeyBuilder.buildBookingsPageKey(user.getId(), null, pageable))
+                .thenReturn(userBookingsCacheKey);
         when(redisService.findAll(userBookingsCacheKey, BookingDto.class))
                 .thenReturn(List.of(bookingDto));
 
@@ -241,8 +250,9 @@ public class BookingServiceTest {
 
         // Then
         assertThat(result).isEqualTo(List.of(bookingDto));
+        verify(cacheKeyBuilder, times(1)).buildBookingsPageKey(user.getId(), null, pageable);
         verify(redisService, times(1)).findAll(userBookingsCacheKey, BookingDto.class);
-        verifyNoMoreInteractions(bookingRepository, bookingMapper, redisService);
+        verifyNoMoreInteractions(bookingRepository, bookingMapper, redisService, cacheKeyBuilder);
     }
 
     @Test

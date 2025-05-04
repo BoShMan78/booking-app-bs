@@ -51,7 +51,6 @@ public class UserControllerTest {
     private User mockUser;
     private AddUserRoleRequestDto addUserRoleRequestDto;
     private Role customerRole;
-    private Role adminRole;
 
     @BeforeEach
     void setUp(@Autowired WebApplicationContext context,
@@ -73,7 +72,6 @@ public class UserControllerTest {
         email = "test@example.com";
 
         customerRole = new Role("CUSTOMER");
-        adminRole = new Role("ADMIN");
 
         mockUser = new User();
         mockUser.setId(userId);

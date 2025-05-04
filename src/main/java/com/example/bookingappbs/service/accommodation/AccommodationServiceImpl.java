@@ -129,7 +129,6 @@ public class AccommodationServiceImpl implements AccommodationService {
         redisService.save(key, dbDtos);
     }
 
-    @Async
     protected void sendAccommodationNotification(String title, Accommodation accommodation) {
         String location = String.format("%s %s, %s, %s",
                 accommodation.getLocation().getStreet(),

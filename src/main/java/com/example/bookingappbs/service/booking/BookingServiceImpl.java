@@ -44,6 +44,7 @@ public class BookingServiceImpl implements BookingService {
     private final RedisService redisService;
     private final AccommodationMapper accommodationMapper;
     private final PaymentService paymentService;
+    private final BookingCacheKeyBuilder cacheKeyBuilder;
 
     @Override
     @Transactional
@@ -86,17 +87,11 @@ public class BookingServiceImpl implements BookingService {
     ) {
         logger.info("Processing request to get bookings by user ID: {}, status: {}, "
                 + "and pagination: {}", userId, status, pageable);
-        StringBuilder cacheKeyBuilder = new StringBuilder(BOOKINGS_PAGE_KEY_PREFIX);
-        if (userId != null) {
-            cacheKeyBuilder.append("::user::").append(userId);
-        }
-        if (status != null) {
-            cacheKeyBuilder.append("::status::").append(status);
-        }
-        cacheKeyBuilder.append("::page::").append(pageable.getPageNumber())
-                .append("::size::").append(pageable.getPageSize())
-                .append("::sort::").append(pageable.getSort());
-        String key = cacheKeyBuilder.toString();
+        String key = cacheKeyBuilder.buildBookingsPageKey(
+                userId,
+                status != null ? status.toString() : null,
+                pageable
+        );
 
         List<BookingDto> cachedBookings = findAllBookingsCache(key);
         if (cachedBookings != null && !cachedBookings.isEmpty()) {
@@ -122,10 +117,12 @@ public class BookingServiceImpl implements BookingService {
     public List<BookingDto> getBookingsByUser(User user, Pageable pageable) {
         logger.info("Processing request to get bookings for user ID: {} with pagination: {}",
                 user.getId(), pageable);
-        String key = BOOKINGS_PAGE_KEY_PREFIX + "::user::" + user.getId()
-                + "::page::" + pageable.getPageNumber()
-                + "::size::" + pageable.getPageSize()
-                + "::sort::" + pageable.getSort();
+        String key = cacheKeyBuilder.buildBookingsPageKey(
+                user.getId(),
+                null,
+                pageable
+        );
+
         List<BookingDto> cachedBookings = findAllBookingsCache(key);
         if (cachedBookings != null && !cachedBookings.isEmpty()) {
             logger.info("Retrieved user bookings from cache with key: {}, count: {}",
@@ -298,7 +295,6 @@ public class BookingServiceImpl implements BookingService {
         redisService.save(key, bookingDtos);
     }
 
-    @Async
     protected void sendBookingNotification(
             String title,
             Booking booking,
