@@ -29,6 +29,7 @@ public class AccommodationServiceImpl implements AccommodationService {
     private final AccommodationMapper accommodationMapper;
     private final NotificationService notificationService;
     private final RedisService redisService;
+    private final AccommodationNotificationBuilder notificationBuilder;
 
     @Override
     @Transactional
@@ -129,22 +130,9 @@ public class AccommodationServiceImpl implements AccommodationService {
         redisService.save(key, dbDtos);
     }
 
-    protected void sendAccommodationNotification(String title, Accommodation accommodation) {
-        String location = String.format("%s %s, %s, %s",
-                accommodation.getLocation().getStreet(),
-                accommodation.getLocation().getHouse(),
-                accommodation.getLocation().getCity(),
-                accommodation.getLocation().getCountry());
-
-        String message = String.format(
-                "%s:\nAccommodation ID: %d\nType: %s\nLocation: %s\nDaily rate: %.2f",
-                title,
-                accommodation.getId(),
-                accommodation.getType(),
-                location,
-                accommodation.getDailyRate()
-        );
-
+    private void sendAccommodationNotification(String title, Accommodation accommodation) {
+        String message = notificationBuilder
+                .buildAccommodationNotificationMessage(title, accommodation);
         notificationService.sendNotification(message);
     }
 }

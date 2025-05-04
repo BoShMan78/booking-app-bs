@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -29,6 +30,7 @@ import com.example.bookingappbs.repository.AccommodationRepository;
 import com.example.bookingappbs.repository.BookingRepository;
 import com.example.bookingappbs.repository.UserRepository;
 import com.example.bookingappbs.service.booking.BookingCacheKeyBuilder;
+import com.example.bookingappbs.service.booking.BookingNotificationBuilder;
 import com.example.bookingappbs.service.booking.BookingServiceImpl;
 import com.example.bookingappbs.service.notification.NotificationService;
 import com.example.bookingappbs.service.payment.PaymentService;
@@ -72,6 +74,8 @@ public class BookingServiceTest {
     private AccommodationMapper accommodationMapper;
     @Mock
     private BookingCacheKeyBuilder cacheKeyBuilder;
+    @Mock
+    private BookingNotificationBuilder notificationBuilder;
 
     private Address address;
     private Long accommodationId;
@@ -161,6 +165,16 @@ public class BookingServiceTest {
         when(bookingRepository.countOverLappingBookings(any(), any(), any(), any())).thenReturn(0);
         when(bookingRepository.save(any(Booking.class))).thenReturn(booking);
         when(bookingMapper.toDto(booking)).thenReturn(bookingDto);
+        String notificationMessage = "New booking created: \n"
+                + "Booking ID: null\n"
+                + "Accommodation ID: 1\n"
+                + "Type: APARTMENT\n"
+                + "Location: Ukraine Odesa, Deribasovskaya str. 1a, Odesa, Ukraine\n"
+                + "Check-in Date: 2027-01-15\n"
+                + "Check-out Date: 2027-01-18";
+        when(notificationBuilder.buildBookingNotificationMessage(
+                "New booking created", booking, accommodation)).thenReturn(notificationMessage);
+        doNothing().when(notificationService).sendNotification(notificationMessage);
 
         //When
         BookingDto savedBookingDto = bookingService.save(user, createBookingRequestDto);
@@ -173,10 +187,12 @@ public class BookingServiceTest {
         verify(bookingRepository, times(1)).save(any(Booking.class));
         verify(bookingMapper, times(1)).toDto(booking);
         verify(redisService, times(1)).deletePattern("bookings*");
+        verify(notificationBuilder, times(1)).buildBookingNotificationMessage(
+                "New booking created", booking, accommodation);
         verify(notificationService, times(1)).sendNotification(anyString());
 
         verifyNoMoreInteractions(bookingRepository, bookingMapper, paymentService, redisService,
-                notificationService);
+                notificationService, notificationBuilder);
     }
 
     @Test
@@ -274,7 +290,7 @@ public class BookingServiceTest {
 
     @Test
     @DisplayName("Verify updateBookingById() method works for admin updating status")
-    public void updateBookingById_AdminUpdateStatus_Success() {
+    public void updateBookingById_AdminUpdateUserStatus_Success() {
         // Given
         when(bookingRepository.findById(bookingId)).thenReturn(Optional.of(booking));
         when(bookingRepository
@@ -287,7 +303,7 @@ public class BookingServiceTest {
 
         // When
         BookingDto result = bookingService
-                .updateBookingById(admin, bookingId, updateBookingRequestDto);
+                .updateBookingByAdmin(bookingId, updateBookingRequestDto);
 
         // Then
         assertThat(result).isEqualTo(bookingDto);
@@ -304,7 +320,7 @@ public class BookingServiceTest {
     @Test
     @DisplayName("updateBookingById should throw AccessDeniedException "
             + "for CUSTOMER trying to update status")
-    void updateBookingById_Customer_UpdateStatus_ThrowsAccessDeniedException() {
+    void updateBookingById_Customer_UpdateUserStatus_ThrowsAccessDeniedException() {
         // Given
         Long bookingIdToUpdate = 1L;
         UpdateBookingRequestDto updateDto = new UpdateBookingRequestDto(
@@ -326,7 +342,7 @@ public class BookingServiceTest {
 
         // When
         AccessDeniedException exception = assertThrows(AccessDeniedException.class,
-                () -> bookingService.updateBookingById(user, bookingIdToUpdate, updateDto));
+                () -> bookingService.updateUserBookingById(user, bookingIdToUpdate, updateDto));
 
         // Then
         assertEquals("The user does not have permission to change the booking status. "
@@ -357,6 +373,20 @@ public class BookingServiceTest {
         when(bookingRepository.findById(bookingId))
                 .thenReturn(Optional.of(existingBookingToDelete));
         when(bookingRepository.save(any(Booking.class))).thenReturn(canceledBooking);
+        String notificationMessage = "Booking canceled: \n"
+                + "Booking ID: 1\n"
+                + "Accommodation ID: 2\n"
+                + "Type: APARTMENT\n"
+                + "Location: Test 1, null, null\n"
+                + "Check-in Date: " + LocalDate.now() + "\n"
+                + "Check-out Date: " + LocalDate.now().plusDays(2);
+        when(notificationBuilder
+                .buildBookingNotificationMessage(
+                        "Booking canceled",
+                        existingBookingToDelete,
+                        accommodationToDelete
+                )).thenReturn(notificationMessage);
+        doNothing().when(notificationService).sendNotification(notificationMessage);
 
         // When
         bookingService.deleteBookingById(user, bookingId);
@@ -368,6 +398,7 @@ public class BookingServiceTest {
         verify(bookingRepository, times(1)).delete(existingBookingToDelete);
         verify(redisService, times(1)).deletePattern("bookings*");
         verify(notificationService, times(1)).sendNotification(anyString());
-        verifyNoMoreInteractions(bookingRepository, redisService, notificationService);
+        verifyNoMoreInteractions(bookingRepository, redisService, notificationService,
+                notificationBuilder);
     }
 }

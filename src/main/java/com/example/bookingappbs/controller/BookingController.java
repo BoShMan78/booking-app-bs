@@ -115,22 +115,41 @@ public class BookingController {
     }
 
     @PatchMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN') or @bookingServiceImpl.canUserModifyBooking(#user, #id)")
+    @PreAuthorize("@bookingServiceImpl.canUserModifyBooking(#user, #id)")
     @Operation(
-            summary = "Update booking details",
-            description = "Allows users to update their booking details. "
-                    + "Admin allows to update any user details and status"
+            summary = "Update user's booking details",
+            description = "Allows authenticated users to update their own booking details "
+                    + "(excluding status)."
     )
-    public BookingDto updateBookingById(
+    public BookingDto updateUserBookingById(
             @AuthenticationPrincipal User user,
             @PathVariable @Positive Long id,
             @RequestBody UpdateBookingRequestDto requestDto
     ) {
         logger.info("Received request to update booking with ID: {} by user ID: {}. "
                 + "Update data: {}", id, user.getId(), requestDto);
-        BookingDto bookingDto = bookingService.updateBookingById(user, id, requestDto);
+        BookingDto bookingDto = bookingService.updateUserBookingById(user, id, requestDto);
 
         logger.info("Booking with ID {} successfully updated.", id);
+        return bookingDto;
+    }
+
+    @PatchMapping("/admin/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(
+            summary = "Update any booking details (Admin only)",
+            description = "Allows administrators to update any booking details, including status."
+    )
+    public BookingDto updateBookingByAdmin(
+            @AuthenticationPrincipal User admin,
+            @PathVariable @Positive Long id,
+            @RequestBody UpdateBookingRequestDto requestDto
+    ) {
+        logger.info("Received admin request to update booking with ID: {}. "
+                + "Update data: {}", id, requestDto);
+        BookingDto bookingDto = bookingService.updateBookingByAdmin(id, requestDto);
+
+        logger.info("Booking with ID {} successfully updated by admin {}.", id, admin.getId());
         return bookingDto;
     }
 

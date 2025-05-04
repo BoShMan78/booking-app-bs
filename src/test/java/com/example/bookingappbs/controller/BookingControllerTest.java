@@ -301,7 +301,7 @@ public class BookingControllerTest {
     @Test
     @WithMockUser(username = "user", roles = {"CUSTOMER"})
     @DisplayName("Update booking by ID - CUSTOMER (can modify)")
-    void updateBookingById_Customer_Ok() throws Exception {
+    void updateUserBookingById_Customer_Ok() throws Exception {
         //Given
         Long bookingId = 6L;
         BookingDto updatedBookingDto = new BookingDto(
@@ -315,7 +315,7 @@ public class BookingControllerTest {
 
         //When
         when(bookingService.canUserModifyBooking(eq(mockUser), eq(bookingId))).thenReturn(true);
-        when(bookingService.updateBookingById(eq(mockUser), eq(bookingId),
+        when(bookingService.updateUserBookingById(eq(mockUser), eq(bookingId),
                 any(UpdateBookingRequestDto.class)))
                 .thenReturn(updatedBookingDto);
 
@@ -336,7 +336,7 @@ public class BookingControllerTest {
                 .andExpect(jsonPath("$.status", is(updateBookingRequestDto.status())));
 
         verify(bookingService, times(1)).canUserModifyBooking(eq(mockUser), eq(bookingId));
-        verify(bookingService, times(1)).updateBookingById(eq(mockUser), eq(bookingId),
+        verify(bookingService, times(1)).updateUserBookingById(eq(mockUser), eq(bookingId),
                 any(UpdateBookingRequestDto.class));
     }
 
@@ -362,7 +362,7 @@ public class BookingControllerTest {
     @Test
     @WithMockUser(username = "user", roles = {"CUSTOMER"})
     @DisplayName("Update booking by ID - forbidden (no access)")
-    void updateBookingById_Forbidden_NoAccess() throws Exception {
+    void updateUserBookingById_Forbidden_NoAccess() throws Exception {
         //Given
         Long bookingId = 8L;
 
@@ -377,6 +377,6 @@ public class BookingControllerTest {
                 .andExpect(status().isForbidden());
 
         verify(bookingService, times(1)).canUserModifyBooking(eq(mockUser), eq(bookingId));
-        verify(bookingService, never()).updateBookingById(any(), any(), any());
+        verify(bookingService, never()).updateUserBookingById(any(), any(), any());
     }
 }

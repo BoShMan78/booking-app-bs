@@ -45,6 +45,7 @@ public class BookingServiceImpl implements BookingService {
     private final AccommodationMapper accommodationMapper;
     private final PaymentService paymentService;
     private final BookingCacheKeyBuilder cacheKeyBuilder;
+    private final BookingNotificationBuilder notificationBuilder;
 
     @Override
     @Transactional
@@ -159,36 +160,59 @@ public class BookingServiceImpl implements BookingService {
 
     @Override
     @Transactional
-    public BookingDto updateBookingById(User user, Long id, UpdateBookingRequestDto requestDto) {
+    public BookingDto updateUserBookingById(
+            User user,
+            Long id,
+            UpdateBookingRequestDto requestDto
+    ) {
         logger.info("Processing request to update booking with ID: {} for user ID: {} "
                 + "with data: {}", id, user.getId(), requestDto);
         Booking existedBooking = bookingRepository.findById(id)
                 .orElseThrow(() ->
                         new EntityNotFoundException("Booking with id " + id + " not found"));
 
-        if (requestDto.status() != null) {
-            if (user.getRoles().stream().noneMatch(role -> role.getName().equals("ADMIN"))) {
-                throw new AccessDeniedException(
-                        "The user does not have permission to change the booking status. "
-                                + "Please contact the administrator.");
-            }
-            if (user.getRoles().stream().anyMatch(role -> role.getName().equals("ADMIN"))) {
-                if (existedBooking.getStatus() == Status.CANCELED
-                        || existedBooking.getStatus() == Status.EXPIRED) {
-                    throw new IllegalArgumentException("Cannot update booking with status "
-                            + existedBooking.getStatus());
-                }
-                Optional.of(requestDto.status()).ifPresent(status -> {
-                    try {
-                        existedBooking.setStatus(Status.valueOf(status));
-                        logger.info("Booking ID {} status updated to: {}", id, status);
-                    } catch (IllegalArgumentException e) {
-                        throw new IllegalArgumentException("Invalid status " + status);
-                    }
-                });
-            }
+        if (!existedBooking.getUser().getId().equals(user.getId())) {
+            throw new AccessDeniedException("User cannot update booking with ID: " + id);
         }
+        if (requestDto.status() != null) {
+            throw new AccessDeniedException("The user does not have permission to change "
+                    + "the booking status. Please contact the administrator.");
+        }
+        return updateBookingDetails(existedBooking, requestDto, id, "user" + user.getId());
+    }
 
+    @Override
+    public BookingDto updateBookingByAdmin(Long id, UpdateBookingRequestDto requestDto) {
+        logger.info("Processing admin request to update booking with ID: {} "
+                + "with data: {}", id, requestDto);
+        Booking existedBooking = bookingRepository.findById(id)
+                .orElseThrow(() ->
+                        new EntityNotFoundException("Booking with id " + id + " not found"));
+
+        if (requestDto.status() != null) {
+            if (existedBooking.getStatus() == Status.CANCELED
+                    || existedBooking.getStatus() == Status.EXPIRED) {
+                throw new IllegalArgumentException("Cannot update booking with status "
+                        + existedBooking.getStatus());
+            }
+            Optional.of(requestDto.status()).ifPresent(status -> {
+                try {
+                    existedBooking.setStatus(Status.valueOf(status));
+                    logger.info("Booking ID {} status updated to: {}", id, status);
+                } catch (IllegalArgumentException e) {
+                    throw new IllegalArgumentException("Invalid status " + status);
+                }
+            });
+        }
+        return updateBookingDetails(existedBooking, requestDto, id, "admin");
+    }
+
+    private BookingDto updateBookingDetails(
+            Booking existedBooking,
+            UpdateBookingRequestDto requestDto,
+            Long bookingId,
+            String updatedBy
+    ) {
         LocalDate newCheckInDate = Optional.ofNullable(requestDto.checkInDate())
                 .orElse(existedBooking.getCheckInDate());
         LocalDate newCheckOutDate = Optional.ofNullable(requestDto.checkOutDate())
@@ -205,7 +229,7 @@ public class BookingServiceImpl implements BookingService {
 
         clearBookingsCache();
 
-        logger.info("Booking with ID {} updated successfully.", id);
+        logger.info("Booking with ID {} updated successfully by {}.", bookingId, updatedBy);
         return bookingDto;
     }
 
@@ -295,21 +319,14 @@ public class BookingServiceImpl implements BookingService {
         redisService.save(key, bookingDtos);
     }
 
-    protected void sendBookingNotification(
+    private void sendBookingNotification(
             String title,
             Booking booking,
             Accommodation accommodation
     ) {
-        notificationService.sendNotification(title + ": \n"
-                + "Booking ID: " + booking.getId() + "\n"
-                + "Accommodation ID: " + accommodation.getId() + "\n"
-                + "Type: " + accommodation.getType() + "\n"
-                + "Location: " + accommodation.getLocation().getStreet() + " "
-                + accommodation.getLocation().getHouse() + ", "
-                + accommodation.getLocation().getCity() + ", "
-                + accommodation.getLocation().getCountry() + "\n"
-                + "Check-in Date: " + booking.getCheckInDate() + "\n"
-                + "Check-out Date: " + booking.getCheckOutDate());
+        String message = notificationBuilder
+                .buildBookingNotificationMessage(title, booking, accommodation);
+        notificationService.sendNotification(message);
     }
 
     private void validateAvailability(

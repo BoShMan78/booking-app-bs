@@ -20,6 +20,7 @@ import com.example.bookingappbs.model.Accommodation;
 import com.example.bookingappbs.model.Accommodation.Type;
 import com.example.bookingappbs.model.Address;
 import com.example.bookingappbs.repository.AccommodationRepository;
+import com.example.bookingappbs.service.accommodation.AccommodationNotificationBuilder;
 import com.example.bookingappbs.service.accommodation.AccommodationServiceImpl;
 import com.example.bookingappbs.service.notification.NotificationService;
 import java.math.BigDecimal;
@@ -52,6 +53,9 @@ public class AccommodationServiceTest {
 
     @Mock
     private RedisService redisService;
+
+    @Mock
+    private AccommodationNotificationBuilder notificationBuilder;
 
     private Address address;
     private AddressDto addressDto;
@@ -142,10 +146,18 @@ public class AccommodationServiceTest {
                 savedAccommodation.getAvailability()
         );
 
+        String notificationMessage = "New accommodation created:\n"
+                + "Accommodation ID: 1\n"
+                + "Type: APARTMENT\n"
+                + "Location: Ukraine Odesa, Deribasovskaya str. 1a, Odesa, Ukraine\n"
+                + "Daily rate: 50.00";
+
         when(accommodationMapper.toModel(requestDto)).thenReturn(accommodationToSave);
         when(accommodationRepository.save(accommodationToSave)).thenReturn(savedAccommodation);
         when(accommodationMapper.toDto(savedAccommodation)).thenReturn(expectedDto);
         doNothing().when(redisService).deletePattern("accommodations::all::*");
+        when(notificationBuilder.buildAccommodationNotificationMessage(
+                "New accommodation created", savedAccommodation)).thenReturn(notificationMessage);
         doNothing().when(notificationService).sendNotification(anyString());
 
         // When
@@ -157,9 +169,11 @@ public class AccommodationServiceTest {
         verify(accommodationRepository, times(1)).save(accommodationToSave);
         verify(accommodationMapper, times(1)).toDto(savedAccommodation);
         verify(redisService, times(1)).deletePattern("accommodations::all::*");
+        verify(notificationBuilder, times(1)).buildAccommodationNotificationMessage(
+                "New accommodation created", savedAccommodation);
         verify(notificationService, times(1)).sendNotification(anyString());
         verifyNoMoreInteractions(accommodationRepository, accommodationMapper,
-                redisService, notificationService);
+                redisService, notificationService, notificationBuilder);
     }
 
     @Test
@@ -276,10 +290,18 @@ public class AccommodationServiceTest {
                 .setType(Type.VACATION_HOME)
                 .setLocation(address)
                 .setDailyRate(BigDecimal.valueOf(200.0));
+        String notificationMessage = "Accommodation deleted:\n"
+                + "Accommodation ID: 1\n"
+                + "Type: VACATION_HOME\n"
+                + "Location: Ukraine Odesa, Deribasovskaya str. 1a, Odesa, Ukraine\n"
+                + "Daily rate: 200.00";
+
         when(accommodationRepository.getAccommodationById(accommodationId))
                 .thenReturn(accommodationToDelete);
         doNothing().when(accommodationRepository).deleteById(accommodationId);
         doNothing().when(redisService).deletePattern("accommodations::all::*");
+        when(notificationBuilder.buildAccommodationNotificationMessage(
+                "Accommodation deleted", accommodationToDelete)).thenReturn(notificationMessage);
         doNothing().when(notificationService).sendNotification(anyString());
 
         // When
@@ -289,7 +311,10 @@ public class AccommodationServiceTest {
         verify(redisService, times(1)).deletePattern("accommodations::all::*");
         verify(accommodationRepository, times(1)).getAccommodationById(accommodationId);
         verify(accommodationRepository, times(1)).deleteById(accommodationId);
+        verify(notificationBuilder, times(1)).buildAccommodationNotificationMessage(
+                "Accommodation deleted", accommodationToDelete);
         verify(notificationService, times(1)).sendNotification(anyString());
-        verifyNoMoreInteractions(accommodationRepository, redisService, notificationService);
+        verifyNoMoreInteractions(accommodationRepository, redisService, notificationService,
+                notificationBuilder);
     }
 }
