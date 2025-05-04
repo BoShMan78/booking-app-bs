@@ -1,7 +1,7 @@
 package com.example.bookingappbs.service.user;
 
+import com.example.bookingappbs.dto.user.AddUserRoleRequestDto;
 import com.example.bookingappbs.dto.user.UpdateCurrentUserRequestDto;
-import com.example.bookingappbs.dto.user.UpdateUserRoleRequestDto;
 import com.example.bookingappbs.dto.user.UserRegistrationRequestDto;
 import com.example.bookingappbs.dto.user.UserResponseDto;
 import com.example.bookingappbs.exception.EntityNotFoundException;
@@ -48,7 +48,7 @@ public class UserServiceImpl implements UserService {
 
     @Override
     @Transactional
-    public UserResponseDto updateUserRole(Long id, UpdateUserRoleRequestDto requestDto) {
+    public UserResponseDto addAdminRoleToUser(Long id, AddUserRoleRequestDto requestDto) {
         logger.info("Updating role for user ID: {} to role ID: {}", id, requestDto.roleId());
         User user = userRepository.findByIdWithRoles(id)
                 .orElseThrow(() -> new EntityNotFoundException("Can't find user by id: " + id));

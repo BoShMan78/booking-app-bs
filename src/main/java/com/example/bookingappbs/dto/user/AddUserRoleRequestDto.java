@@ -2,7 +2,7 @@ package com.example.bookingappbs.dto.user;
 
 import jakarta.validation.constraints.NotNull;
 
-public record UpdateUserRoleRequestDto(
+public record AddUserRoleRequestDto(
         @NotNull
         Long roleId
 ) {

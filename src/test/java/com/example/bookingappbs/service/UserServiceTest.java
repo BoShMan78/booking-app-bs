@@ -11,8 +11,8 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
+import com.example.bookingappbs.dto.user.AddUserRoleRequestDto;
 import com.example.bookingappbs.dto.user.UpdateCurrentUserRequestDto;
-import com.example.bookingappbs.dto.user.UpdateUserRoleRequestDto;
 import com.example.bookingappbs.dto.user.UserRegistrationRequestDto;
 import com.example.bookingappbs.dto.user.UserResponseDto;
 import com.example.bookingappbs.exception.EntityNotFoundException;
@@ -51,7 +51,7 @@ public class UserServiceTest {
     private User userToSave;
     private User savedUser;
     private UserResponseDto expectedUserResponseDto;
-    private UpdateUserRoleRequestDto updateUserRoleRequestDto;
+    private AddUserRoleRequestDto addUserRoleRequestDto;
     private User existingUser;
     private User updatedUserWithRole;
     private User currentUser;
@@ -89,7 +89,7 @@ public class UserServiceTest {
                 savedUser.getLastName(),
                 savedUser.getRoles().stream().map(Role::getId).toList()
         );
-        updateUserRoleRequestDto = new UpdateUserRoleRequestDto(1L);
+        addUserRoleRequestDto = new AddUserRoleRequestDto(1L);
         existingUser = new User()
                 .setId(1L)
                 .setEmail("test@example.com")
@@ -152,7 +152,7 @@ public class UserServiceTest {
 
     @Test
     @DisplayName("Verify updateUserRole() method works and updates user role")
-    public void updateUserRole_ValidIdAndRequestDto_ReturnsUpdatedUserResponseDto() {
+    public void addAdminResponseDtoToUser() {
         // Given
         when(userRepository.findByIdWithRoles(anyLong())).thenReturn(Optional.of(existingUser));
         when(roleRepository.findById(1L)).thenReturn(Optional.of(adminRole));
@@ -166,7 +166,7 @@ public class UserServiceTest {
         ));
 
         // When
-        UserResponseDto actualDto = userService.updateUserRole(1L, updateUserRoleRequestDto);
+        UserResponseDto actualDto = userService.addAdminRoleToUser(1L, addUserRoleRequestDto);
 
         // Then
         assertThat(actualDto.roleIds()).contains(adminRole.getId());

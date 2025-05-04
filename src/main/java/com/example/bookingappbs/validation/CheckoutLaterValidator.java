@@ -1,15 +1,16 @@
 package com.example.bookingappbs.validation;
 
-import com.example.bookingappbs.model.Booking;
+import com.example.bookingappbs.dto.booking.DateRange;
 import jakarta.validation.ConstraintValidator;
 import jakarta.validation.ConstraintValidatorContext;
 
-public class CheckoutLaterValidator implements ConstraintValidator<CheckoutLaterCheckin, Booking> {
+public class CheckoutLaterValidator
+        implements ConstraintValidator<CheckoutLaterCheckin, DateRange> {
     @Override
-    public boolean isValid(Booking booking, ConstraintValidatorContext context) {
-        if (booking.getCheckInDate() == null || booking.getCheckOutDate() == null) {
+    public boolean isValid(DateRange dateRange, ConstraintValidatorContext context) {
+        if (dateRange.checkInDate() == null || dateRange.checkOutDate() == null) {
             return true;
         }
-        return booking.getCheckOutDate().isAfter(booking.getCheckInDate());
+        return dateRange.checkOutDate().isAfter(dateRange.checkInDate());
     }
 }

@@ -7,8 +7,8 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.example.bookingappbs.dto.user.AddUserRoleRequestDto;
 import com.example.bookingappbs.dto.user.UpdateCurrentUserRequestDto;
-import com.example.bookingappbs.dto.user.UpdateUserRoleRequestDto;
 import com.example.bookingappbs.model.Role;
 import com.example.bookingappbs.model.User;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -49,7 +49,7 @@ public class UserControllerTest {
     private Long userId;
     private String email;
     private User mockUser;
-    private UpdateUserRoleRequestDto updateUserRoleRequestDto;
+    private AddUserRoleRequestDto addUserRoleRequestDto;
     private Role customerRole;
     private Role adminRole;
 
@@ -80,7 +80,7 @@ public class UserControllerTest {
         mockUser.setEmail(email);
         mockUser.setRoles(Set.of(customerRole));
 
-        updateUserRoleRequestDto = new UpdateUserRoleRequestDto(1L);
+        addUserRoleRequestDto = new AddUserRoleRequestDto(1L);
 
         Authentication authentication = new UsernamePasswordAuthenticationToken(
                 mockUser, null, mockUser.getAuthorities());
@@ -99,8 +99,8 @@ public class UserControllerTest {
 
     @Test
     @WithMockUser(username = "admin", roles = {"ADMIN"})
-    @DisplayName("Update user role by ID - ADMIN")
-    void updateUserRole_AdminUser_ShouldReturnOkAndUpdatedUser() throws Exception {
+    @DisplayName("Add ADMIN role to user by ADMIN ID - ADMIN only")
+    void addAdminToUser() throws Exception {
         // Given
         Long targetUserId = 1L;
         SecurityContextHolder.getContext().setAuthentication(
@@ -110,7 +110,7 @@ public class UserControllerTest {
         // When & Then
         mockMvc.perform(put("/users/{id}/role", targetUserId)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(updateUserRoleRequestDto)))
+                        .content(objectMapper.writeValueAsString(addUserRoleRequestDto)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id", is(targetUserId.intValue())))
                 .andExpect(jsonPath("$.roleIds").isArray())

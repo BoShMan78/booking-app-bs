@@ -1,6 +1,5 @@
 package com.example.bookingappbs.model;
 
-import com.example.bookingappbs.validation.CheckoutLaterCheckin;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -29,7 +28,6 @@ import org.hibernate.annotations.Where;
 @Accessors(chain = true)
 @EqualsAndHashCode(of = {"checkInDate", "user"})
 @SQLDelete(sql = "UPDATE bookings SET is_deleted=true WHERE id=?")
-@CheckoutLaterCheckin
 @Where(clause = "is_deleted=false")
 @Table(name = "bookings")
 public class Booking {

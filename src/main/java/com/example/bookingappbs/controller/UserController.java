@@ -1,7 +1,7 @@
 package com.example.bookingappbs.controller;
 
+import com.example.bookingappbs.dto.user.AddUserRoleRequestDto;
 import com.example.bookingappbs.dto.user.UpdateCurrentUserRequestDto;
-import com.example.bookingappbs.dto.user.UpdateUserRoleRequestDto;
 import com.example.bookingappbs.dto.user.UserResponseDto;
 import com.example.bookingappbs.model.User;
 import com.example.bookingappbs.service.user.UserService;
@@ -33,15 +33,16 @@ public class UserController {
 
     @PreAuthorize("hasRole('ADMIN')")
     @PutMapping("/{id}/role")
-    @Operation(summary = "Update user role",
-            description = "Enables users to update their roleIds, providing role-based access")
-    public UserResponseDto updateUserRole(
+    @Operation(summary = "Add ADMIN role to user",
+            description = "Enables adding the ADMIN role to a user. "
+                    + "Accessible only by administrators.")
+    public UserResponseDto addAdminRoleToUser(
             @PathVariable @Positive Long id,
-            @RequestBody @Valid UpdateUserRoleRequestDto requestDto
+            @RequestBody @Valid AddUserRoleRequestDto requestDto
     ) {
         logger.info("Processing request to update role for user ID: {}. New role ID: {}",
                 id, requestDto.roleId());
-        UserResponseDto updatedUser = userService.updateUserRole(id, requestDto);
+        UserResponseDto updatedUser = userService.addAdminRoleToUser(id, requestDto);
 
         logger.info("Role for user ID {} successfully updated. New role ID: {}",
                 id, requestDto.roleId());

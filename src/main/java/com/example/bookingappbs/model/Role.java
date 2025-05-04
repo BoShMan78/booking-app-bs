@@ -5,10 +5,8 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
-import jakarta.persistence.ManyToMany;
 import jakarta.persistence.Table;
 import java.util.Objects;
-import java.util.Set;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -24,8 +22,6 @@ public class Role {
     private Long id;
     @Column(unique = true, nullable = false)
     private String name;
-    @ManyToMany(mappedBy = "roles")
-    private Set<User> users;
 
     public Role(String name) {
         this.name = name;
