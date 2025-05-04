@@ -87,7 +87,7 @@ public class UserServiceTest {
                 savedUser.getEmail(),
                 savedUser.getFirstName(),
                 savedUser.getLastName(),
-                savedUser.getRoles().stream().map(Object::toString).toList()
+                savedUser.getRoles().stream().map(Role::getId).toList()
         );
         updateUserRoleRequestDto = new UpdateUserRoleRequestDto(1L);
         existingUser = new User()
@@ -162,14 +162,14 @@ public class UserServiceTest {
                 updatedUserWithRole.getEmail(),
                 updatedUserWithRole.getFirstName(),
                 updatedUserWithRole.getLastName(),
-                updatedUserWithRole.getRoles().stream().map(Role::getName).toList()
+                updatedUserWithRole.getRoles().stream().map(Role::getId).toList()
         ));
 
         // When
         UserResponseDto actualDto = userService.updateUserRole(1L, updateUserRoleRequestDto);
 
         // Then
-        assertThat(actualDto.roles()).contains(adminRole.getName());
+        assertThat(actualDto.roleIds()).contains(adminRole.getId());
         verify(userRepository, times(1)).findByIdWithRoles(1L);
         verify(roleRepository, times(1)).findById(1L);
         verify(userRepository, times(1)).save(existingUser);
@@ -188,7 +188,7 @@ public class UserServiceTest {
                 existingUser.getEmail(),
                 existingUser.getFirstName(),
                 existingUser.getLastName(),
-                existingUser.getRoles().stream().map(Object::toString).toList()
+                existingUser.getRoles().stream().map(Role::getId).toList()
         ));
 
         // When
@@ -217,7 +217,7 @@ public class UserServiceTest {
                 updatedLocalUser.getEmail(),
                 updatedLocalUser.getFirstName(),
                 updatedLocalUser.getLastName(),
-                updatedLocalUser.getRoles().stream().map(Object::toString).toList()
+                updatedLocalUser.getRoles().stream().map(Role::getId).toList()
         );
 
         when(userRepository.findById(currentUser.getId())).thenReturn(Optional.of(existingUser));

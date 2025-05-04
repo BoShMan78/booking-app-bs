@@ -273,7 +273,7 @@ public class BookingServiceTest {
         when(bookingRepository.save(any(Booking.class))).thenReturn(booking);
         when(bookingMapper.toDto(booking)).thenReturn(bookingDto);
 
-        System.out.println("Admin roles: " + admin.getRoles());
+        System.out.println("Admin roleIds: " + admin.getRoles());
 
         // When
         BookingDto result = bookingService

@@ -60,7 +60,7 @@ public class AuthenticationControllerTest {
                 "test@example.com",
                 "John",
                 "Doe",
-                List.of(customerRole.getName())
+                List.of(1L)
         );
         loginDto = new UserLoginRequestDto("test@example.com", "Password#1");
         loginResponseDto = new UserLoginResponseDto("test-jwt-token");
@@ -82,7 +82,7 @@ public class AuthenticationControllerTest {
                 .andExpect(MockMvcResultMatchers.jsonPath("$.email").value("test@example.com"))
                 .andExpect(MockMvcResultMatchers.jsonPath("$.firstName").value("John"))
                 .andExpect(MockMvcResultMatchers.jsonPath("$.lastName").value("Doe"))
-                .andExpect(MockMvcResultMatchers.jsonPath("$.roles").value(customerRole.getName()));
+                .andExpect(MockMvcResultMatchers.jsonPath("$.roleIds[0]").value(1));
 
         Mockito.verify(userService).register(any(UserRegistrationRequestDto.class));
     }

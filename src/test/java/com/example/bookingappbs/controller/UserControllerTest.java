@@ -1,6 +1,5 @@
 package com.example.bookingappbs.controller;
 
-import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.is;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
@@ -114,7 +113,8 @@ public class UserControllerTest {
                         .content(objectMapper.writeValueAsString(updateUserRoleRequestDto)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id", is(targetUserId.intValue())))
-                .andExpect(jsonPath("$.roles", contains(adminRole.getName())));
+                .andExpect(jsonPath("$.roleIds").isArray())
+                .andExpect(jsonPath("$.roleIds.length()", is(1)));
     }
 
     @Test
@@ -128,7 +128,8 @@ public class UserControllerTest {
                 .andExpect(jsonPath("$.email", is(email)))
                 .andExpect(jsonPath("$.firstName", is("Test")))
                 .andExpect(jsonPath("$.lastName", is("User")))
-                .andExpect(jsonPath("$.roles", contains(customerRole.getName())));
+                .andExpect(jsonPath("$.roleIds").isArray())
+                .andExpect(jsonPath("$.roleIds[0]", is(2)));
     }
 
     @Test
@@ -153,6 +154,7 @@ public class UserControllerTest {
                 .andExpect(jsonPath("$.firstName", is(updatedFirstName)))
                 .andExpect(jsonPath("$.lastName", is("User")))
                 .andExpect(jsonPath("$.email", is("test@example.com")))
-                .andExpect(jsonPath("$.roles", contains(customerRole.getName())));
+                .andExpect(jsonPath("$.roleIds").isArray())
+                .andExpect(jsonPath("$.roleIds[0]", is(2)));
     }
 }

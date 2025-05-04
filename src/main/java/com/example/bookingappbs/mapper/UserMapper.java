@@ -20,12 +20,12 @@ import org.springframework.security.crypto.password.PasswordEncoder;
         nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE
 )
 public interface UserMapper {
-    @Mapping(target = "roles",
-            expression = "java(mapRoles(user.getRoles()))")
+    @Mapping(target = "roleIds",
+            expression = "java(mapRoleIds(user.getRoles()))")
     UserResponseDto toDto(User user);
 
-    default List<String> mapRoles(Set<Role> roles) {
-        return roles.stream().map(Role::getName).toList();
+    default List<Long> mapRoleIds(Set<Role> roles) {
+        return roles.stream().map(Role::getId).toList();
     }
 
     @Mapping(target = "password",
