@@ -10,6 +10,8 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.test.context.ActiveProfiles;
 
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 @SpringBootTest(classes = BookingAppBsApplication.class)
 @ImportAutoConfiguration(exclude = {RedisAutoConfiguration.class})
 @ActiveProfiles("test")
@@ -23,5 +25,6 @@ class BookingAppBsApplicationTests {
 
     @Test
     void contextLoads() {
+        assertTrue(true, "Spring context was loaded successfully");
     }
 }

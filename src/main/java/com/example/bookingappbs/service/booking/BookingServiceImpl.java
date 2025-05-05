@@ -306,17 +306,16 @@ public class BookingServiceImpl implements BookingService {
     }
 
     @Async
-    protected void clearBookingsCache() {
+    public void clearBookingsCache() {
         redisService.deletePattern(BOOKINGS_PAGE_KEY_PREFIX + "*");
     }
 
-    @Async
-    protected List<BookingDto> findAllBookingsCache(String key) {
+    private List<BookingDto> findAllBookingsCache(String key) {
         return redisService.findAll(key, BookingDto.class);
     }
 
     @Async
-    protected void saveToCacheDtos(String key, List<BookingDto> bookingDtos) {
+    public void saveToCacheDtos(String key, List<BookingDto> bookingDtos) {
         redisService.save(key, bookingDtos);
     }
 

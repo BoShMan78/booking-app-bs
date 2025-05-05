@@ -11,6 +11,8 @@ import com.example.bookingappbs.service.RedisService;
 import com.example.bookingappbs.service.notification.NotificationService;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.Future;
+
 import lombok.RequiredArgsConstructor;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -115,18 +117,17 @@ public class AccommodationServiceImpl implements AccommodationService {
         logger.info("Accommodation with ID {} deleted successfully.", id);
     }
 
-    @Async
-    protected List<AccommodationDto> findAllAccommodationsCache(String key) {
+    private List<AccommodationDto> findAllAccommodationsCache(String key) {
         return redisService.findAll(key, AccommodationDto.class);
     }
 
     @Async
-    protected void clearAccommodationCache() {
+    public void clearAccommodationCache() {
         redisService.deletePattern(ACCOMMODATIONS_PAGE_KEY_PREFIX + "*");
     }
 
     @Async
-    protected void saveToCacheDtos(String key, List<AccommodationDto> dbDtos) {
+    public void saveToCacheDtos(String key, List<AccommodationDto> dbDtos) {
         redisService.save(key, dbDtos);
     }
 
