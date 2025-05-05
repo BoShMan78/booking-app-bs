@@ -22,6 +22,7 @@ import org.springframework.web.util.UriComponentsBuilder;
 
 @Service
 @RequiredArgsConstructor
+@Transactional
 public class StripeService {
     private static final Logger logger = LogManager.getLogger(StripeService.class);
 
@@ -41,7 +42,6 @@ public class StripeService {
         Stripe.apiKey = secretKey;
     }
 
-    @Transactional
     public String createPaymentSession(BookingDto bookingDto, BigDecimal totalAmount)
             throws StripeException {
         logger.info("Creating Stripe payment session for booking ID: {}, amount: {} {}",
@@ -54,6 +54,7 @@ public class StripeService {
         return session.getId();
     }
 
+    @Transactional(readOnly = true)
     public List<Charge> getChargesForUserId(Long userId) throws StripeException {
         logger.info("Retrieving Stripe charges for user ID: {}", userId);
         Map<String, Object> params = new HashMap<>();
@@ -65,6 +66,7 @@ public class StripeService {
         return charges;
     }
 
+    @Transactional(readOnly = true)
     public Session retrieveSession(String sessionId) throws StripeException {
         logger.info("Retrieving Stripe session with ID: {}", sessionId);
         Session session = Session.retrieve(sessionId);

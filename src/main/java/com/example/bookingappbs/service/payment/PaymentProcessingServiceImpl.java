@@ -29,6 +29,7 @@ import org.springframework.ui.Model;
 
 @Service
 @RequiredArgsConstructor
+@Transactional
 public class PaymentProcessingServiceImpl implements PaymentProcessingService {
     private static final Logger logger = LogManager.getLogger(PaymentProcessingServiceImpl.class);
 
@@ -62,6 +63,7 @@ public class PaymentProcessingServiceImpl implements PaymentProcessingService {
     private final NotificationService notificationService;
 
     @Override
+    @Transactional(readOnly = true)
     public List<PaymentDto> getPaymentsForCurrentUser(Long userId, Pageable pageable) {
         logger.info("Processing request to get payments for user ID: {} with pagination: {}",
                 userId, pageable);
@@ -72,6 +74,7 @@ public class PaymentProcessingServiceImpl implements PaymentProcessingService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<PaymentDto> getAllPayments(Pageable pageable) {
         logger.info("Processing request to get all payments with pagination: {}", pageable);
         List<PaymentDto> allPayments = paymentService.getAllPayments(pageable);
@@ -81,7 +84,6 @@ public class PaymentProcessingServiceImpl implements PaymentProcessingService {
     }
 
     @Override
-    @Transactional
     public PaymentDto createPaymentSession(User user, Long bookingId) throws StripeException {
         logger.info("Processing request to create payment session for booking ID: {} "
                 + "by user ID: {}", bookingId, user.getId());
@@ -116,7 +118,7 @@ public class PaymentProcessingServiceImpl implements PaymentProcessingService {
     }
 
     @Override
-    @Transactional
+    @Transactional(readOnly = true)
     public String handlePaymentSuccess(String sessionId, Model model) {
         logger.info("Handling successful payment for Stripe session ID: {}", sessionId);
         try {
@@ -155,7 +157,7 @@ public class PaymentProcessingServiceImpl implements PaymentProcessingService {
         return "payment_success";
     }
 
-    protected void sendPaymentSuccessNotification(
+    private void sendPaymentSuccessNotification(
             PaymentDto paymentDto,
             BookingDto bookingDto,
             AccommodationDto accommodationDto,
@@ -184,6 +186,7 @@ public class PaymentProcessingServiceImpl implements PaymentProcessingService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public String getPaymentCancelledMessage(String sessionId) {
         logger.info("Returning cancellation message for Stripe session ID: {}", sessionId);
         return paymentCancelledMessage + sessionId + ". "
@@ -192,7 +195,6 @@ public class PaymentProcessingServiceImpl implements PaymentProcessingService {
     }
 
     @Override
-    @Transactional
     public String renewPaymentSession(Long paymentId, User user, Model model) {
         logger.info("Processing request to renew payment session with ID: {} by user ID: {}",
                 paymentId, user.getId());
@@ -242,7 +244,6 @@ public class PaymentProcessingServiceImpl implements PaymentProcessingService {
     }
 
     @Scheduled(fixedDelay = 60000)
-    @Transactional
     public void checkExpiredSessions() {
         logger.info("Scheduled task: Checking for expired Stripe sessions.");
         List<Payment> pendingPayments = paymentService.findByStatus(Status.PENDING);

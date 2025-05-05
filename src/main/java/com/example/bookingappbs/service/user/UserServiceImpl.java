@@ -8,6 +8,7 @@ import com.example.bookingappbs.exception.EntityNotFoundException;
 import com.example.bookingappbs.mapper.UserMapper;
 import com.example.bookingappbs.model.Role;
 import com.example.bookingappbs.model.User;
+import com.example.bookingappbs.model.UserRole;
 import com.example.bookingappbs.repository.RoleRepository;
 import com.example.bookingappbs.repository.UserRepository;
 import java.util.Set;
@@ -20,6 +21,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 @RequiredArgsConstructor
 @Service
+@Transactional
 public class UserServiceImpl implements UserService {
     private static final Logger logger = LogManager.getLogger(UserServiceImpl.class);
 
@@ -29,12 +31,12 @@ public class UserServiceImpl implements UserService {
     private final RoleRepository roleRepository;
 
     @Override
-    @Transactional
     public UserResponseDto register(UserRegistrationRequestDto requestDto) {
         logger.info("Processing registration for user with email: {}", requestDto.email());
 
-        Role role = roleRepository.findByName("CUSTOMER").orElseThrow(() ->
-                new EntityNotFoundException("Role 'CUSTOMER' not found in database"));
+        Role role = roleRepository.findByName(UserRole.CUSTOMER.name()).orElseThrow(() ->
+                new EntityNotFoundException("Role '" + UserRole.CUSTOMER.name()
+                        + "' not found in database"));
         User user = userMapper.toModel(requestDto, passwordEncoder);
         user.setPassword(passwordEncoder.encode(requestDto.password()));
         user.setRoles(Set.of(role));
@@ -47,7 +49,6 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    @Transactional
     public UserResponseDto addAdminRoleToUser(Long id, AddUserRoleRequestDto requestDto) {
         logger.info("Updating role for user ID: {} to role ID: {}", id, requestDto.roleId());
         User user = userRepository.findByIdWithRoles(id)
@@ -67,6 +68,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public UserResponseDto getUser(User user) {
         logger.info("Retrieving user information for user ID: {}", user.getId());
         User userFromDB = userRepository.findByIdWithRoles(user.getId())
@@ -79,7 +81,6 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    @Transactional
     public UserResponseDto updateCurrentUserPatch(User currentUser,
                                                   UpdateCurrentUserRequestDto requestDto) {
         logger.info("Updating profile for user ID: {} with data: {}", currentUser.getId(),

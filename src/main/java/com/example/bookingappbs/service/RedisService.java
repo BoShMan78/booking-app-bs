@@ -14,13 +14,13 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
+@Transactional
 public class RedisService {
     private static final Logger logger = LogManager.getLogger(RedisService.class);
 
     private final RedisTemplate<String, String> redisTemplate;
     private final ObjectMapper objectMapper;
 
-    @Transactional
     public <T> void save(String key, T value) {
         logger.info("Saving to Redis with key: {}", key);
         try {
@@ -32,6 +32,7 @@ public class RedisService {
         }
     }
 
+    @Transactional(readOnly = true)
     public <T> T find(String key, Class<T> clazz) {
         logger.info("Finding from Redis with key: {}", key);
         String json = redisTemplate.opsForValue().get(key);
@@ -48,6 +49,7 @@ public class RedisService {
         }
     }
 
+    @Transactional(readOnly = true)
     public <T> List<T> findAll(String key, Class<T> clazz) {
         logger.info("Finding all from Redis with key: {}", key);
         String json = redisTemplate.opsForValue().get(key);
@@ -68,7 +70,6 @@ public class RedisService {
         }
     }
 
-    @Transactional
     public void delete(String key) {
         logger.info("Deleting from Redis with key: {}", key);
         redisTemplate.delete(key);

@@ -33,6 +33,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
+@Transactional
 public class BookingServiceImpl implements BookingService {
     private static final Logger logger = LogManager.getLogger(BookingServiceImpl.class);
     private static final String BOOKINGS_PAGE_KEY_PREFIX = "bookings";
@@ -48,7 +49,6 @@ public class BookingServiceImpl implements BookingService {
     private final BookingNotificationBuilder notificationBuilder;
 
     @Override
-    @Transactional
     public BookingDto save(User user, CreateBookingRequestDto requestDto) {
         logger.info("Processing request to save a new booking for user ID: {} with data: {}",
                 user.getId(), requestDto);
@@ -81,6 +81,7 @@ public class BookingServiceImpl implements BookingService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<BookingDto> getBookingsByUserAndStatus(
             Long userId,
             Status status,
@@ -115,6 +116,7 @@ public class BookingServiceImpl implements BookingService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<BookingDto> getBookingsByUser(User user, Pageable pageable) {
         logger.info("Processing request to get bookings for user ID: {} with pagination: {}",
                 user.getId(), pageable);
@@ -145,6 +147,7 @@ public class BookingServiceImpl implements BookingService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public BookingDto getBookingById(User user, Long id) {
         logger.info("Processing request to get booking with ID: {} for user ID: {}",
                 id, user.getId());
@@ -159,7 +162,6 @@ public class BookingServiceImpl implements BookingService {
     }
 
     @Override
-    @Transactional
     public BookingDto updateUserBookingById(
             User user,
             Long id,
@@ -234,7 +236,6 @@ public class BookingServiceImpl implements BookingService {
     }
 
     @Override
-    @Transactional
     public void deleteBookingById(User user, Long id) {
         logger.info("Processing request to delete booking with ID: {} for user ID: {}",
                 id, user.getId());
@@ -263,7 +264,6 @@ public class BookingServiceImpl implements BookingService {
     }
 
     @Override
-    @Transactional
     @Scheduled(cron = "0 0 0 * * *")
     public void checkAndExpiredBooking() {
         logger.info("Scheduled task: Checking for expired bookings.");
@@ -294,6 +294,7 @@ public class BookingServiceImpl implements BookingService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public AccommodationDto findAccommodationById(Long accommodationId) {
         logger.info("Processing request to find accommodation by ID: {}", accommodationId);
         Accommodation accommodation = accommodationRepository.findById(accommodationId)

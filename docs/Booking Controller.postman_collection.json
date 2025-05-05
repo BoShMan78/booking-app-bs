@@ -180,14 +180,14 @@
 			"response": []
 		},
 		{
-			"name": "Update booking by booking Id.",
+			"name": "Update Booking by Id (for USER))",
 			"request": {
 				"auth": {
 					"type": "bearer",
 					"bearer": [
 						{
 							"key": "token",
-							"value": "eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiJ1c2VyQGV4YW1wbGUuY29tIiwiaWF0IjoxNzQyMjA1NzU2LCJleHAiOjE3NDIyMDg3NTZ9.zNcXkhucMGRc__t5rvPJi3wlwo1qKLmtQgyXewvDC6FDTzXM_My3TDRSaZdxTGJ9",
+							"value": "eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiJ1c2VyMUBleGFtcGxlLmNvbSIsImlhdCI6MTc0NjQyOTc1MSwiZXhwIjoxNzQ2NDMyNzUxfQ.ZXQ4X4o_TMMUsBfgPPMqZiKmYRpLuZygjTlhG1-Nc4EuFIhiOskJEJIMGY2BGcIs",
 							"type": "string"
 						}
 					]
@@ -196,7 +196,7 @@
 				"header": [],
 				"body": {
 					"mode": "raw",
-					"raw": "{\r\n    \"checkInDate\": \"2025-03-20\",\r\n    \"checkOutDate\": \"2025-03-22\"\r\n}",
+					"raw": "{\r\n    \"checkInDate\": \"2025-09-01\",\r\n    \"checkOutDate\": \"2025-09-05\"\r\n}",
 					"options": {
 						"raw": {
 							"language": "json"
@@ -204,7 +204,7 @@
 					}
 				},
 				"url": {
-					"raw": "http://localhost:8080/bookings/3",
+					"raw": "http://localhost:8080/bookings/2",
 					"protocol": "http",
 					"host": [
 						"localhost"
@@ -212,7 +212,7 @@
 					"port": "8080",
 					"path": [
 						"bookings",
-						"3"
+						"2"
 					]
 				}
 			},
@@ -252,6 +252,46 @@
 					"path": [
 						"bookings",
 						"3"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Update Booking by Id (for ADMIN))",
+			"request": {
+				"auth": {
+					"type": "bearer",
+					"bearer": [
+						{
+							"key": "token",
+							"value": "eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiJhZG1pbkBleGFtcGxlLmNvbSIsImlhdCI6MTc0NjQzMDA2NCwiZXhwIjoxNzQ2NDMzMDY0fQ.SmJbeW5FO4YMJDsG5dWjTjHGrlbLl1UVPNDP2OjoRBu6X_P5WEqRfaBFl8i6ng6G",
+							"type": "string"
+						}
+					]
+				},
+				"method": "PATCH",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n    \"status\": \"CONFIRMED\"\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://localhost:8080/bookings/admin/2",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"bookings",
+						"admin",
+						"2"
 					]
 				}
 			},

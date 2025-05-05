@@ -7,9 +7,11 @@ import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
+import org.telegram.telegrambots.meta.generics.LongPollingBot;
 
 @Service
-public class TelegramService extends TelegramLongPollingBot implements NotificationService {
+public class TelegramService extends TelegramLongPollingBot
+        implements NotificationService, LongPollingBot {
     @Value("${telegram.bot.token}")
     private String botToken;
     @Value("${telegram.chat.id}")

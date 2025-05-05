@@ -20,6 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
+@Transactional
 public class PaymentServiceImpl implements PaymentService {
     private static final Logger logger = LogManager.getLogger(PaymentServiceImpl.class);
 
@@ -28,6 +29,7 @@ public class PaymentServiceImpl implements PaymentService {
     private final BookingRepository bookingRepository;
 
     @Override
+    @Transactional(readOnly = true)
     public List<PaymentDto> getPaymentsForCurrentUser(Long userId, Pageable pageable) {
         logger.info("Getting payments for user ID: {} with pagination: {}", userId, pageable);
         Page<Payment> payments = paymentRepository.findByBooking_User_Id(userId, pageable);
@@ -40,6 +42,7 @@ public class PaymentServiceImpl implements PaymentService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<PaymentDto> getAllPayments(Pageable pageable) {
         logger.info("Getting all payments with pagination: {}", pageable);
         Page<Payment> payments = paymentRepository.findAll(pageable);
@@ -52,7 +55,6 @@ public class PaymentServiceImpl implements PaymentService {
     }
 
     @Override
-    @Transactional
     public PaymentDto save(CreatePaymentRequestDto requestDto) {
         logger.info("Saving payment with request: {}", requestDto);
         Payment payment = paymentMapper.toModel(requestDto);
@@ -68,6 +70,7 @@ public class PaymentServiceImpl implements PaymentService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public PaymentDto findBySessionId(String sessionId) {
         logger.info("Finding payment by session ID: {}", sessionId);
         Payment payment = paymentRepository.findBySessionId(sessionId).orElseThrow(
@@ -79,7 +82,6 @@ public class PaymentServiceImpl implements PaymentService {
     }
 
     @Override
-    @Transactional
     public void updatePaymentStatus(String sessionId, Status status) {
         logger.info("Updating payment status for session ID: {} to: {}", sessionId, status);
         Payment payment = paymentRepository.findBySessionId(sessionId).orElseThrow(() ->
@@ -90,7 +92,6 @@ public class PaymentServiceImpl implements PaymentService {
     }
 
     @Override
-    @Transactional
     public void updateSessionUrl(Long id, String url) {
         logger.info("Updating session URL for payment ID: {} to: {}", id, url);
         Payment payment = paymentRepository.findById(id).orElseThrow(
@@ -101,6 +102,7 @@ public class PaymentServiceImpl implements PaymentService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public PaymentDto findById(Long paymentId) {
         logger.info("Finding payment by ID: {}", paymentId);
         Payment payment = paymentRepository.findById(paymentId)
@@ -113,7 +115,6 @@ public class PaymentServiceImpl implements PaymentService {
     }
 
     @Override
-    @Transactional
     public void updateSessionIdAndUrl(Long paymentId, String sessionId, String sessionUrl) {
         logger.info("Updating session ID and URL for payment ID: {} to session ID: {} and URL: {}",
                 paymentId, sessionId, sessionUrl);
@@ -126,6 +127,7 @@ public class PaymentServiceImpl implements PaymentService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<Payment> findByStatus(Status status) {
         logger.info("Finding payments by status: {}", status);
         List<Payment> payments = paymentRepository.findByStatus(status);
@@ -135,6 +137,7 @@ public class PaymentServiceImpl implements PaymentService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public long countPendingPaymentsForUser(Long userId) {
         logger.info("Counting pending payments for user ID: {}", userId);
         long count = paymentRepository.countByBooking_User_IdAndStatus(userId, Status.PENDING);

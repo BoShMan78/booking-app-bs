@@ -21,6 +21,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
+@Transactional
 public class AccommodationServiceImpl implements AccommodationService {
     private static final Logger logger = LogManager.getLogger(AccommodationServiceImpl.class);
     private static final String ACCOMMODATIONS_PAGE_KEY_PREFIX = "accommodations::all::";
@@ -32,7 +33,6 @@ public class AccommodationServiceImpl implements AccommodationService {
     private final AccommodationNotificationBuilder notificationBuilder;
 
     @Override
-    @Transactional
     public AccommodationDto save(CreateAccommodationRequestDto requestDto) {
         logger.info("Processing request to save a new accommodation: {}", requestDto);
         Accommodation accommodation = accommodationMapper.toModel(requestDto);
@@ -47,6 +47,7 @@ public class AccommodationServiceImpl implements AccommodationService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<AccommodationDto> findAll(Pageable pageable) {
         logger.info("Processing request to find all accommodations with pagination: {}", pageable);
         String key = ACCOMMODATIONS_PAGE_KEY_PREFIX + "page:" + pageable.getPageNumber()
@@ -69,6 +70,7 @@ public class AccommodationServiceImpl implements AccommodationService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public AccommodationDto findAccommodationById(Long id) {
         logger.info("Processing request to find accommodation by ID: {}", id);
 
@@ -81,7 +83,6 @@ public class AccommodationServiceImpl implements AccommodationService {
     }
 
     @Override
-    @Transactional
     public AccommodationDto updateAccommodationById(
             Long id, UpdateAccommodationRequestDto requestDto
     ) {
@@ -103,7 +104,6 @@ public class AccommodationServiceImpl implements AccommodationService {
     }
 
     @Override
-    @Transactional
     public void deleteAccommodationById(Long id) {
         logger.info("Processing request to delete accommodation with ID: {}", id);
         clearAccommodationCache();
