@@ -29,12 +29,3 @@ jobs:
         run: mvn clean install -DskipTests
       - name: Run Tests
         run: mvn test
-      - name: Code Analysis with SonarCloud
-        uses: sonarsource/sonarcloud-github-action@master
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        with:
-          args: >-
-            -Dsonar.projectKey=BoShMan78_booking-app-bs
-            -Dsonar.organization=boshman

@@ -115,18 +115,17 @@ public class AccommodationServiceImpl implements AccommodationService {
         logger.info("Accommodation with ID {} deleted successfully.", id);
     }
 
-    @Async
-    protected List<AccommodationDto> findAllAccommodationsCache(String key) {
+    private List<AccommodationDto> findAllAccommodationsCache(String key) {
         return redisService.findAll(key, AccommodationDto.class);
     }
 
     @Async
-    protected void clearAccommodationCache() {
+    public void clearAccommodationCache() {
         redisService.deletePattern(ACCOMMODATIONS_PAGE_KEY_PREFIX + "*");
     }
 
     @Async
-    protected void saveToCacheDtos(String key, List<AccommodationDto> dbDtos) {
+    public void saveToCacheDtos(String key, List<AccommodationDto> dbDtos) {
         redisService.save(key, dbDtos);
     }
 
