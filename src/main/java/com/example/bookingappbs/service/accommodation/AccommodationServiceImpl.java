@@ -11,8 +11,6 @@ import com.example.bookingappbs.service.RedisService;
 import com.example.bookingappbs.service.notification.NotificationService;
 import java.util.List;
 import java.util.Optional;
-import java.util.concurrent.Future;
-
 import lombok.RequiredArgsConstructor;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;

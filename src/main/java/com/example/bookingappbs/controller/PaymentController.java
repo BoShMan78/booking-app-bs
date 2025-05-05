@@ -64,8 +64,8 @@ public class PaymentController {
             Model model,
             Pageable pageable
     ) {
-        logger.info("Processing request to get payments for current user ID: {}. " +
-                        "Page number: {}, Page size: {}, Sort: {}",
+        logger.info("Processing request to get payments for current user ID: {}. "
+                        + "Page number: {}, Page size: {}, Sort: {}",
                 user.getId(), pageable.getPageNumber(), pageable.getPageSize(),
                 pageable.getSort());
         List<PaymentDto> paymentDtos = paymentProcessingService
@@ -89,8 +89,8 @@ public class PaymentController {
             }
     )
     public String getAllPayments(Model model, Pageable pageable) {
-        logger.info("Processing request to get all payments. " +
-                        "Page number: {}, Page size: {}, Sort: {}",
+        logger.info("Processing request to get all payments. "
+                        + "Page number: {}, Page size: {}, Sort: {}",
                 pageable.getPageNumber(), pageable.getPageSize(), pageable.getSort());
         List<PaymentDto> paymentDtos = paymentProcessingService.getAllPayments(pageable);
 
