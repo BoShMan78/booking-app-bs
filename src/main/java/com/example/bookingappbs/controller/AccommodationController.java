@@ -47,7 +47,9 @@ public class AccommodationController {
     public AccommodationDto createAccommodation(
             @RequestBody @Valid CreateAccommodationRequestDto requestDto
     ) {
-        logger.info("Processing request to create a new accommodation: {}", requestDto);
+        logger.info("Processing request to create a new accommodation. "
+                        + "Type: {}, Address: {}",
+                requestDto.type(), requestDto.location());
         AccommodationDto savedAccommodation = accommodationService.save(requestDto);
 
         logger.info("Accommodation successfully created with ID: {}", savedAccommodation.id());
@@ -62,8 +64,9 @@ public class AccommodationController {
     public List<AccommodationDto> getAccommodations(
             @ParameterObject @PageableDefault Pageable pageable
     ) {
-        logger.info("Received request to get all accommodations. Pagination parameters: {}",
-                pageable);
+        logger.info("Received request to get all accommodations. "
+                        + "Page number: {}, Page size: {}, Sort: {}",
+                pageable.getPageNumber(), pageable.getPageSize(), pageable.getSort());
         List<AccommodationDto> accommodationDtos = accommodationService.findAll(pageable);
 
         logger.info("Retrieved {} accommodations.", accommodationDtos.size());
@@ -93,8 +96,9 @@ public class AccommodationController {
             @PathVariable @Positive Long id,
             @RequestBody UpdateAccommodationRequestDto requestDto
     ) {
-        logger.info("Received request to update accommodation with ID: {}. Update data: {}",
-                id, requestDto);
+        logger.info("Received request to update accommodation with ID: {}. "
+                        + "Type: {}, Address: {}",
+                id, requestDto.type(), requestDto.location());
         AccommodationDto accommodationDto = accommodationService
                 .updateAccommodationById(id, requestDto);
 
