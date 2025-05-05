@@ -18,7 +18,7 @@ public class TelegramBotConfig {
         try {
             telegramBotsApi.registerBot(telegramBot);
         } catch (TelegramApiException e) {
-            e.printStackTrace();
+            throw new TelegramApiException("Error creating Telegram Chat Bot BEAN");
         }
         return telegramBotsApi;
     }
