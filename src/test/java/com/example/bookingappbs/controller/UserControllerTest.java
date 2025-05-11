@@ -10,6 +10,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.example.bookingappbs.dto.user.AddUserRoleRequestDto;
 import com.example.bookingappbs.dto.user.UpdateCurrentUserRequestDto;
 import com.example.bookingappbs.model.Role;
+import com.example.bookingappbs.model.Role.RoleNames;
 import com.example.bookingappbs.model.User;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.sql.Connection;
@@ -71,7 +72,7 @@ public class UserControllerTest {
         userId = 1L;
         email = "test@example.com";
 
-        customerRole = new Role("CUSTOMER");
+        customerRole = new Role(RoleNames.CUSTOMER);
 
         mockUser = new User();
         mockUser.setId(userId);

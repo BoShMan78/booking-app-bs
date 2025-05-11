@@ -21,6 +21,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -36,6 +37,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping(value = "/bookings")
+@Validated
 public class BookingController {
     private static final Logger logger = LogManager.getLogger(BookingController.class);
 
@@ -51,8 +53,10 @@ public class BookingController {
             @AuthenticationPrincipal User user,
             @RequestBody @Valid CreateBookingRequestDto requestDto
     ) {
-        logger.info("Processing request to create a new booking for user ID: {}. Request: {}",
-                user.getId(), requestDto);
+        logger.info("Processing request to create a new booking for user ID: {}. "
+                        + "Accommodation ID: {}, Check-in: {}, Check-out: {}",
+                user.getId(), requestDto.accommodationId(), requestDto.checkInDate(),
+                requestDto.checkOutDate());
         BookingDto savedBooking = bookingService.save(user, requestDto);
 
         logger.info("Booking successfully created with ID: {}", savedBooking.id());
@@ -66,12 +70,14 @@ public class BookingController {
             description = "Available for managers. Allows filtering by user ID and/or status."
     )
     public List<BookingDto> getBookingsByUserIdAndStatus(
-            @RequestParam(required = false) Long userId,
+            @RequestParam(required = false) @Positive Long userId,
             @RequestParam(required = false) Status status,
             @ParameterObject @PageableDefault Pageable pageable
     ) {
         logger.info("Received request to get bookings by user ID: {} and status: {}. "
-                + "Pagination: {}", userId, status, pageable);
+                        + "Page number: {}, Page size: {}, Sort: {}",
+                userId, status, pageable.getPageNumber(), pageable.getPageSize(),
+                pageable.getSort());
         List<BookingDto> bookings = bookingService
                 .getBookingsByUserAndStatus(userId, status, pageable);
 
@@ -88,8 +94,10 @@ public class BookingController {
             @AuthenticationPrincipal User user,
             @ParameterObject @PageableDefault Pageable pageable
     ) {
-        logger.info("Received request to get bookings for current user ID: {}. Pagination: {}",
-                user.getId(), pageable);
+        logger.info("Received request to get bookings for current user ID: {}. "
+                        + "Page number: {}, Page size: {}, Sort: {}",
+                user.getId(), pageable.getPageNumber(), pageable.getPageSize(),
+                pageable.getSort());
         List<BookingDto> userBookings = bookingService.getBookingsByUser(user, pageable);
 
         logger.info("Retrieved {} bookings for user ID: {}.", userBookings.size(), user.getId());
@@ -124,10 +132,11 @@ public class BookingController {
     public BookingDto updateUserBookingById(
             @AuthenticationPrincipal User user,
             @PathVariable @Positive Long id,
-            @RequestBody UpdateBookingRequestDto requestDto
+            @RequestBody @Valid UpdateBookingRequestDto requestDto
     ) {
         logger.info("Received request to update booking with ID: {} by user ID: {}. "
-                + "Update data: {}", id, user.getId(), requestDto);
+                        + "Check-in: {}, Check-out: {}",
+                id, user.getId(), requestDto.checkInDate(), requestDto.checkOutDate());
         BookingDto bookingDto = bookingService.updateUserBookingById(user, id, requestDto);
 
         logger.info("Booking with ID {} successfully updated.", id);
@@ -143,10 +152,12 @@ public class BookingController {
     public BookingDto updateBookingByAdmin(
             @AuthenticationPrincipal User admin,
             @PathVariable @Positive Long id,
-            @RequestBody UpdateBookingRequestDto requestDto
+            @RequestBody @Valid UpdateBookingRequestDto requestDto
     ) {
         logger.info("Received admin request to update booking with ID: {}. "
-                + "Update data: {}", id, requestDto);
+                        + "Check-in: {}, Check-out: {}, Status: {}",
+                id, requestDto.checkInDate(), requestDto.checkOutDate(),
+                requestDto.status());
         BookingDto bookingDto = bookingService.updateBookingByAdmin(id, requestDto);
 
         logger.info("Booking with ID {} successfully updated by admin {}.", id, admin.getId());

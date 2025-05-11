@@ -7,6 +7,7 @@ import com.stripe.exception.StripeException;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import jakarta.validation.constraints.Positive;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.apache.logging.log4j.LogManager;
@@ -36,7 +37,7 @@ public class PaymentController {
     @ResponseBody
     @Operation(summary = "Initiates payment sessions for a specific booking")
     public PaymentDto createPaymentSession(
-            @RequestParam("bookingId") Long bookingId,
+            @RequestParam("bookingId") @Positive Long bookingId,
             @AuthenticationPrincipal User user
     ) throws StripeException {
         logger.info("Processing request to create payment session for booking ID: {} "
@@ -64,8 +65,10 @@ public class PaymentController {
             Model model,
             Pageable pageable
     ) {
-        logger.info("Processing request to get payments for current user ID: {}. Pagination: {}",
-                user.getId(), pageable);
+        logger.info("Processing request to get payments for current user ID: {}. "
+                        + "Page number: {}, Page size: {}, Sort: {}",
+                user.getId(), pageable.getPageNumber(), pageable.getPageSize(),
+                pageable.getSort());
         List<PaymentDto> paymentDtos = paymentProcessingService
                 .getPaymentsForCurrentUser(user.getId(), pageable);
 
@@ -87,7 +90,9 @@ public class PaymentController {
             }
     )
     public String getAllPayments(Model model, Pageable pageable) {
-        logger.info("Processing request to get all payments. Pagination: {}", pageable);
+        logger.info("Processing request to get all payments. "
+                        + "Page number: {}, Page size: {}, Sort: {}",
+                pageable.getPageNumber(), pageable.getPageSize(), pageable.getSort());
         List<PaymentDto> paymentDtos = paymentProcessingService.getAllPayments(pageable);
 
         logger.info("Retrieved {} payments in total.", paymentDtos.size());

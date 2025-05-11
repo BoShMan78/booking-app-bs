@@ -25,6 +25,7 @@ import com.example.bookingappbs.model.Address;
 import com.example.bookingappbs.model.Booking;
 import com.example.bookingappbs.model.Booking.Status;
 import com.example.bookingappbs.model.Role;
+import com.example.bookingappbs.model.Role.RoleNames;
 import com.example.bookingappbs.model.User;
 import com.example.bookingappbs.repository.AccommodationRepository;
 import com.example.bookingappbs.repository.BookingRepository;
@@ -115,8 +116,8 @@ public class BookingServiceTest {
                 accommodationId
         );
 
-        customerRole = new Role("CUSTOMER");
-        adminRole = new Role("ADMIN");
+        customerRole = new Role(RoleNames.CUSTOMER);
+        adminRole = new Role(RoleNames.ADMIN);
 
         userId = 1L;
         user = new User().setId(userId).setRoles(Set.of(customerRole));

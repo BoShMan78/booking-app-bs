@@ -23,6 +23,7 @@ import com.example.bookingappbs.dto.booking.UpdateBookingRequestDto;
 import com.example.bookingappbs.model.Booking;
 import com.example.bookingappbs.model.Booking.Status;
 import com.example.bookingappbs.model.Role;
+import com.example.bookingappbs.model.Role.RoleNames;
 import com.example.bookingappbs.model.User;
 import com.example.bookingappbs.service.booking.BookingService;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -101,8 +102,8 @@ public class BookingControllerTest {
                     new ClassPathResource("database/bookings/add-three-bookings.sql")
             );
         }
-        customerRole = new Role("CUSTOMER");
-        adminRole = new Role("ADMIN");
+        customerRole = new Role(RoleNames.CUSTOMER);
+        adminRole = new Role(RoleNames.ADMIN);
 
         mockUser = new User().setId(1L)
                 .setEmail("user@example.com")

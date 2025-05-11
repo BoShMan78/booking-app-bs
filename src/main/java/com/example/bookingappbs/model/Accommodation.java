@@ -19,19 +19,17 @@ import java.util.ArrayList;
 import java.util.List;
 import lombok.AccessLevel;
 import lombok.Getter;
-import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.Accessors;
 import org.hibernate.annotations.SQLDelete;
-import org.hibernate.annotations.Where;
+import org.hibernate.annotations.SQLRestriction;
 
 @Entity
 @Getter
 @Setter
-@NoArgsConstructor
 @Accessors(chain = true)
 @SQLDelete(sql = "UPDATE accommodations SET is_deleted=true WHERE id=?")
-@Where(clause = "is_deleted=false")
+@SQLRestriction(value = "is_deleted = false")
 @Table(name = "accommodations")
 public class Accommodation {
     @Id

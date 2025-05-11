@@ -7,6 +7,7 @@ import com.example.bookingappbs.dto.user.UserResponseDto;
 import com.example.bookingappbs.exception.EntityNotFoundException;
 import com.example.bookingappbs.mapper.UserMapper;
 import com.example.bookingappbs.model.Role;
+import com.example.bookingappbs.model.Role.RoleNames;
 import com.example.bookingappbs.model.User;
 import com.example.bookingappbs.model.UserRole;
 import com.example.bookingappbs.repository.RoleRepository;
@@ -34,7 +35,7 @@ public class UserServiceImpl implements UserService {
     public UserResponseDto register(UserRegistrationRequestDto requestDto) {
         logger.info("Processing registration for user with email: {}", requestDto.email());
 
-        Role role = roleRepository.findByName(UserRole.CUSTOMER.name()).orElseThrow(() ->
+        Role role = roleRepository.findByName(RoleNames.CUSTOMER).orElseThrow(() ->
                 new EntityNotFoundException("Role '" + UserRole.CUSTOMER.name()
                         + "' not found in database"));
         User user = userMapper.toModel(requestDto, passwordEncoder);

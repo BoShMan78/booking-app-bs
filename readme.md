@@ -69,18 +69,6 @@ This project utilizes the following technologies and their respective versions:
 
 * **Java:** 17
 * **Spring Boot:** 3.4.3
-  * `spring-boot-starter-data-jdbc`
-  * `spring-boot-starter-data-jpa`
-  * `spring-boot-starter-security`
-  * `spring-boot-starter-web`
-  * `spring-boot-starter-web-services`
-  * `spring-boot-devtools`
-  * `spring-boot-docker-compose`
-  * `spring-boot-starter-test`
-  * `spring-boot-starter-validation`
-  * `spring-boot-starter-thymeleaf`
-  * `spring-boot-starter-data-redis`
-  * `spring-boot-starter-actuator`
 * **Database:** PostgreSQL (runtime)
 * **JSON Web Tokens (JWT):**
 * **Data Mapping:** MapStruct 1.5.5.Final
@@ -89,13 +77,8 @@ This project utilizes the following technologies and their respective versions:
 * **Payment Gateway Integration:** Stripe Java 28.4.0
 * **Telegram Bot Integration:** Telegram Bots Spring Boot Starter 6.8.0
 * **Redis:**
-    * `spring-boot-starter-data-redis`
-    * `spring-data-redis`
-    * Jedis 4.2.3
 * **JSON Processing:** Jackson Data Bind
 * **Testing:**
-    * `spring-boot-starter-test`
-    * `spring-security-test`
     * JUnit Jupiter
     * JUnit Platform Launcher
     * JsonAssert 1.5.3

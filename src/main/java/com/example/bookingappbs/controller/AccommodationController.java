@@ -18,6 +18,7 @@ import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -32,6 +33,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping(value = "/accommodations")
+@Validated
 public class AccommodationController {
     private static final Logger logger = LogManager.getLogger(AccommodationController.class);
 
@@ -47,7 +49,9 @@ public class AccommodationController {
     public AccommodationDto createAccommodation(
             @RequestBody @Valid CreateAccommodationRequestDto requestDto
     ) {
-        logger.info("Processing request to create a new accommodation: {}", requestDto);
+        logger.info("Processing request to create a new accommodation. "
+                        + "Type: {}, Address: {}",
+                requestDto.type(), requestDto.location());
         AccommodationDto savedAccommodation = accommodationService.save(requestDto);
 
         logger.info("Accommodation successfully created with ID: {}", savedAccommodation.id());
@@ -62,8 +66,9 @@ public class AccommodationController {
     public List<AccommodationDto> getAccommodations(
             @ParameterObject @PageableDefault Pageable pageable
     ) {
-        logger.info("Received request to get all accommodations. Pagination parameters: {}",
-                pageable);
+        logger.info("Received request to get all accommodations. "
+                        + "Page number: {}, Page size: {}, Sort: {}",
+                pageable.getPageNumber(), pageable.getPageSize(), pageable.getSort());
         List<AccommodationDto> accommodationDtos = accommodationService.findAll(pageable);
 
         logger.info("Retrieved {} accommodations.", accommodationDtos.size());
@@ -93,8 +98,9 @@ public class AccommodationController {
             @PathVariable @Positive Long id,
             @RequestBody UpdateAccommodationRequestDto requestDto
     ) {
-        logger.info("Received request to update accommodation with ID: {}. Update data: {}",
-                id, requestDto);
+        logger.info("Received request to update accommodation with ID: {}. "
+                        + "Type: {}, Address: {}",
+                id, requestDto.type(), requestDto.location());
         AccommodationDto accommodationDto = accommodationService
                 .updateAccommodationById(id, requestDto);
 

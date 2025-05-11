@@ -34,22 +34,13 @@ public class CustomGlobalExceptionHandler extends ResponseEntityExceptionHandler
         return buildResponseEntity(HttpStatus.BAD_REQUEST, "Validation error", errors);
     }
 
-    private String getErrorMessage(ObjectError e) {
-        if (e instanceof FieldError) {
-            String field = ((FieldError) e).getField();
-            String message = e.getDefaultMessage();
-            return field + ": " + message;
-        }
-        return e.getDefaultMessage();
-    }
-
     @ExceptionHandler(RegistrationException.class)
     public ResponseEntity<Object> handleRegistrationException(
             RegistrationException exception,
             WebRequest request
     ) {
         return buildResponseEntity(HttpStatus.CONFLICT, "Registration failed",
-                List.of("Bad Request"), exception.getMessage());
+                List.of(exception.getMessage()), exception.getMessage());
     }
 
     @ExceptionHandler(StripeException.class)
@@ -63,7 +54,8 @@ public class CustomGlobalExceptionHandler extends ResponseEntityExceptionHandler
             AccessDeniedException exception,
             WebRequest request
     ) {
-        return buildResponseEntity(HttpStatus.FORBIDDEN, "Access denied", List.of("Bad Request"),
+        return buildResponseEntity(HttpStatus.FORBIDDEN, "Access denied",
+                List.of(exception.getMessage()),
                 exception.getMessage());
     }
 
@@ -85,6 +77,15 @@ public class CustomGlobalExceptionHandler extends ResponseEntityExceptionHandler
                 List.of(exception.getMessage()), exception.getMessage());
     }
 
+    private String getErrorMessage(ObjectError e) {
+        if (e instanceof FieldError) {
+            String field = ((FieldError) e).getField();
+            String message = e.getDefaultMessage();
+            return field + ": " + message;
+        }
+        return e.getDefaultMessage();
+    }
+
     private ResponseEntity<Object> buildResponseEntity(
             HttpStatus status,
             String error,
@@ -92,7 +93,6 @@ public class CustomGlobalExceptionHandler extends ResponseEntityExceptionHandler
     ) {
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("timestamp", LocalDateTime.now());
-        body.put("status", status.value());
         body.put("error", error);
         body.put("errors", errors);
         return new ResponseEntity<>(body, status);
@@ -106,7 +106,6 @@ public class CustomGlobalExceptionHandler extends ResponseEntityExceptionHandler
     ) {
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("timestamp", LocalDateTime.now());
-        body.put("status", status.value());
         body.put("error", error);
         body.put("errors", errors);
         body.put("message", message);

@@ -24,7 +24,6 @@ public interface AccommodationMapper {
 
     Address toModel(CreateAddressRequestDto requestDto);
 
-    @Mapping(target = "location", source = "location")
     Accommodation toModel(CreateAccommodationRequestDto requestDto);
 
     @Mapping(target = "type", source = "requestDto.type")
