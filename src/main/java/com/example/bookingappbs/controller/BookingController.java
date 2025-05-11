@@ -21,6 +21,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -36,6 +37,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping(value = "/bookings")
+@Validated
 public class BookingController {
     private static final Logger logger = LogManager.getLogger(BookingController.class);
 
@@ -68,7 +70,7 @@ public class BookingController {
             description = "Available for managers. Allows filtering by user ID and/or status."
     )
     public List<BookingDto> getBookingsByUserIdAndStatus(
-            @RequestParam(required = false) Long userId,
+            @RequestParam(required = false) @Positive Long userId,
             @RequestParam(required = false) Status status,
             @ParameterObject @PageableDefault Pageable pageable
     ) {
@@ -130,7 +132,7 @@ public class BookingController {
     public BookingDto updateUserBookingById(
             @AuthenticationPrincipal User user,
             @PathVariable @Positive Long id,
-            @RequestBody UpdateBookingRequestDto requestDto
+            @RequestBody @Valid UpdateBookingRequestDto requestDto
     ) {
         logger.info("Received request to update booking with ID: {} by user ID: {}. "
                         + "Check-in: {}, Check-out: {}",
@@ -150,7 +152,7 @@ public class BookingController {
     public BookingDto updateBookingByAdmin(
             @AuthenticationPrincipal User admin,
             @PathVariable @Positive Long id,
-            @RequestBody UpdateBookingRequestDto requestDto
+            @RequestBody @Valid UpdateBookingRequestDto requestDto
     ) {
         logger.info("Received admin request to update booking with ID: {}. "
                         + "Check-in: {}, Check-out: {}, Status: {}",

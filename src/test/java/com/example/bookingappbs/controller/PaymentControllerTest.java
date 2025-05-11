@@ -13,6 +13,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.example.bookingappbs.dto.payment.PaymentDto;
 import com.example.bookingappbs.model.Payment.Status;
 import com.example.bookingappbs.model.Role;
+import com.example.bookingappbs.model.Role.RoleNames;
 import com.example.bookingappbs.model.User;
 import com.example.bookingappbs.service.payment.PaymentProcessingService;
 import java.math.BigDecimal;
@@ -58,8 +59,8 @@ public class PaymentControllerTest {
 
     @BeforeEach
     void setUp() {
-        customerRole = new Role("CUSTOMER");
-        adminRole = new Role("ADMIN");
+        customerRole = new Role(RoleNames.CUSTOMER);
+        adminRole = new Role(RoleNames.ADMIN);
         testUser = new User()
                 .setId(1L)
                 .setEmail("user@example.com")

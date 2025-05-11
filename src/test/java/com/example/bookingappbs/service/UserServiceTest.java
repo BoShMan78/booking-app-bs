@@ -18,6 +18,7 @@ import com.example.bookingappbs.dto.user.UserResponseDto;
 import com.example.bookingappbs.exception.EntityNotFoundException;
 import com.example.bookingappbs.mapper.UserMapper;
 import com.example.bookingappbs.model.Role;
+import com.example.bookingappbs.model.Role.RoleNames;
 import com.example.bookingappbs.model.User;
 import com.example.bookingappbs.repository.RoleRepository;
 import com.example.bookingappbs.repository.UserRepository;
@@ -68,8 +69,8 @@ public class UserServiceTest {
                 "John",
                 "Doe"
         );
-        customerRole = new Role("CUSTOMER");
-        adminRole = new Role("ADMIN");
+        customerRole = new Role(RoleNames.CUSTOMER);
+        adminRole = new Role(RoleNames.ADMIN);
         userToSave = new User()
                 .setEmail(registrationRequestDto.email())
                 .setFirstName(registrationRequestDto.firstName())
@@ -115,7 +116,7 @@ public class UserServiceTest {
     @DisplayName("Verify register() method works and saves new user")
     public void register_ValidRequestDto_ReturnsUserResponseDto() {
         // Given
-        when(roleRepository.findByName("CUSTOMER")).thenReturn(Optional.of(customerRole));
+        when(roleRepository.findByName(RoleNames.CUSTOMER)).thenReturn(Optional.of(customerRole));
         when(userMapper.toModel(registrationRequestDto, passwordEncoder)).thenReturn(userToSave);
         when(passwordEncoder.encode(registrationRequestDto.password()))
                 .thenReturn("encodedPassword");
@@ -127,7 +128,7 @@ public class UserServiceTest {
 
         // Then
         assertThat(actualDto).isEqualTo(expectedUserResponseDto);
-        verify(roleRepository, times(1)).findByName("CUSTOMER");
+        verify(roleRepository, times(1)).findByName(RoleNames.CUSTOMER);
         verify(userMapper, times(1)).toModel(registrationRequestDto, passwordEncoder);
         verify(passwordEncoder, times(1)).encode(registrationRequestDto.password());
         verify(userRepository, times(1)).save(userToSave);
@@ -139,14 +140,14 @@ public class UserServiceTest {
     @DisplayName("register should throw EntityNotFoundException if 'CUSTOMER' role is not found")
     void register_CustomerRoleNotFound_ThrowsEntityNotFoundException() {
         // When
-        when(roleRepository.findByName("CUSTOMER")).thenReturn(Optional.empty());
+        when(roleRepository.findByName(RoleNames.CUSTOMER)).thenReturn(Optional.empty());
 
         EntityNotFoundException exception = assertThrows(EntityNotFoundException.class,
                 () -> userService.register(registrationRequestDto));
 
         // Then
         assertEquals("Role 'CUSTOMER' not found in database", exception.getMessage());
-        verify(roleRepository).findByName("CUSTOMER");
+        verify(roleRepository).findByName(RoleNames.CUSTOMER);
         verifyNoInteractions(userRepository, userMapper, passwordEncoder);
     }
 

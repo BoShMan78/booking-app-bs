@@ -7,6 +7,7 @@ import com.stripe.exception.StripeException;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import jakarta.validation.constraints.Positive;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.apache.logging.log4j.LogManager;
@@ -36,7 +37,7 @@ public class PaymentController {
     @ResponseBody
     @Operation(summary = "Initiates payment sessions for a specific booking")
     public PaymentDto createPaymentSession(
-            @RequestParam("bookingId") Long bookingId,
+            @RequestParam("bookingId") @Positive Long bookingId,
             @AuthenticationPrincipal User user
     ) throws StripeException {
         logger.info("Processing request to create payment session for booking ID: {} "
